@@ -139,7 +139,7 @@ if st.button("Run Analysis"):
     
     # Create and display the map below the title
     m = geemap.Map(draw_control=False)
-    m.centerObject(region, 12)
+    m.centerObject(region, 6)
     m.addLayer(GES_first, ges_params, "GES Start Year",shown=False)
     m.addLayer(GES_last, ges_params, "GES End Year",shown=False)
     m.addLayer(GES_diff, ges_params, "GES Change")
