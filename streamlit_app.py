@@ -8,6 +8,8 @@ import geemap.foliumap as geemap
 import folium
 from google.oauth2 import service_account
 import gc
+import matplotlib.pyplot as plt
+import numpy as np
 
 #--------------------------------------------------------
 # Initialization
@@ -111,6 +113,55 @@ def get_ges(intersection, year):
     gc.collect()
     return GES
 
+# Function to process and display the GES classification
+def process_and_display(image):
+    # Your GES data - Assuming it's already defined
+    GES_first = ee.Image('YOUR_GES_IMAGE')  # Replace with your actual GES image reference
+
+    # Normalize the GES image to the min/max values defined in ges_params
+    GES_normalized = GES_first.subtract(ges_params['min']).divide(ges_params['max'] - ges_params['min'])
+
+    # Create a classification based on the normalized values
+    class_counts = {}
+    for i, label in enumerate(ges_params['labels']):
+        # Create a mask for the current class
+        lower_bound = i / len(ges_params['labels'])  # Lower bound for classification
+        upper_bound = (i + 1) / len(ges_params['labels'])  # Upper bound for classification
+
+        # Mask values within the current range
+        class_mask = GES_normalized.gte(lower_bound).And(GES_normalized.lt(upper_bound))
+
+        # Count the pixels within the mask
+        count = GES_first.updateMask(class_mask).reduceRegion(
+            reducer=ee.Reducer.count(),
+            scale=1000,
+            maxPixels=1e13
+        ).get('GES').getInfo()
+        class_counts[label] = count
+
+    # Extract class names and counts for plotting
+    class_names = list(class_counts.keys())
+    counts = list(class_counts.values())
+
+    # Map class names to colors for the bar chart using the palette
+    colors = ges_params['palette']
+
+    # Streamlit App - Plotting the Bar Chart
+    st.title('GES Change Classification')
+
+    # Create the bar chart
+    fig, ax = plt.subplots(figsize=(10, 6))
+    ax.bar(class_names, counts, color=colors)  # Use the mapped colors
+
+    # Customize the chart
+    ax.set_title('GES Change Classification')
+    ax.set_xlabel('Classification')
+    ax.set_ylabel('Pixel Count')
+    ax.grid(axis='y')  # Add horizontal grid lines
+
+    # Display the chart in Streamlit
+    st.pyplot(fig)
+
 # --- Streamlit UI --- #
 st.title("🌍 Good Environmental Status (GES) Mapping Tool")
 
@@ -148,5 +199,8 @@ if st.button("Run Analysis"):
     m.to_streamlit(height=600)
     
     gc.collect()
+
+if st.button('Run GES Classification'):
+    process_and_display(GES_diff)
     
     
