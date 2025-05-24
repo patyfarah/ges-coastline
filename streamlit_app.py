@@ -27,13 +27,26 @@ credentials = service_account.Credentials.from_service_account_info(
 ee.Initialize(credentials)
 
 # Visualization Params
-ges_params = {
+ges_params1 = {
     'bands': ['GES'],
     'palette': ['#a50026', '#f88d52', '#ffffbf', '#86cb66', '#006837'],
     'min': -50,
     'max': 50,
     'labels': ['Very Severe', 'Severe', 'No Change', 'Good Environmental', 'Excellent Improvement']
 }
+
+# Define the class labels and corresponding ranges for GES_diff
+# Changed -float('inf') to a practical lower bound, e.g., -100
+ges_params = {
+    'Very Severe': (-100, -25),
+    'Severe': (-25, -5),
+    'No Change': (-5, 5),
+    'Good Envionmental': (5, 25),
+    'Excellent improvement': (25, float('inf')) # float('inf') is generally handled better as an upper bound
+}
+
+# Define the palette separately so it's accessible for the bar chart color
+ges_palette = ['#a50026', '#f88d52', '#ffffbf', '#86cb66', '#006837']
 
 NDVI_PRODUCTS = {"MOD13A1": ee.ImageCollection("MODIS/061/MOD13A1")}
 LST_PRODUCTS = {"MOD11A1": ee.ImageCollection("MODIS/061/MOD11A1")}
@@ -103,30 +116,31 @@ def get_ges(intersection, year):
 def process_and_display():
     GES_first = ee.Image('GES_diff')  
     
-    # Create a classification based on the normalized values
+   # Calculate the number of pixels in each class
     class_counts = {}
-    for i, label in enumerate(ges_params['labels']):
-        # Create a mask for the current class
-        lower_bound = i / len(ges_params['labels'])  # Lower bound for classification
-        upper_bound = (i + 1) / len(ges_params['labels'])  # Upper bound for classification
-
-        # Mask values within the current range
-        class_mask = GES_first.gte(lower_bound).And(GES_first.lt(upper_bound))
-
+    for class_name, (lower, upper) in ges_params.items():
+        # Create a mask for the current class range
+        # Ensure the comparison handles the upper bound correctly (inclusive/exclusive based on definition)
+        if upper == float('inf'):
+            class_mask = GES_first.gte(lower)
+        else:
+            class_mask = GES_first.gte(lower).And(GES_first.lt(upper))
+    
         # Count the pixels within the mask
         count = GES_first.updateMask(class_mask).reduceRegion(
             reducer=ee.Reducer.count(),
+            #geometry=region, # Consider adding the region if needed - make sure 'region' is accessible in this scope
             scale=1000,
             maxPixels=1e13
         ).get('GES').getInfo()
-        class_counts[label] = count
-
+        class_counts[class_name] = count
+    
     # Extract class names and counts for plotting
     class_names = list(class_counts.keys())
     counts = list(class_counts.values())
-
-    # Map class names to colors for the bar chart using the palette
-    colors = ges_params['palette']
+    
+    # Map class names to colors for the bar chart
+    colors = [ges_palette[list(ges_params.keys()).index(name)] for name in class_names]
 
     # Streamlit App - Plotting the Bar Chart
     st.title('GES Change Classification')
@@ -173,9 +187,9 @@ if st.button("Run Analysis"):
     # Create and display the map below the title
     m = geemap.Map(draw_control=False)
     m.centerObject(region, 6)
-    m.addLayer(GES_first, ges_params, "GES Start Year",shown=False)
-    m.addLayer(GES_last, ges_params, "GES End Year",shown=False)
-    m.addLayer(GES_diff, ges_params, "GES Change")
+    m.addLayer(GES_first, ges_params1, "GES Start Year",shown=False)
+    m.addLayer(GES_last, ges_params1, "GES End Year",shown=False)
+    m.addLayer(GES_diff, ges_params1, "GES Change")
     m.addLayer(filtered.style(**{"color": "black", "fillColor": "#00000000", "width": 2}), {}, "Border")
     m.add_legend(title="GES Classification", legend_dict=dict(zip(ges_params['labels'], ges_params['palette'])))
     m.to_streamlit(height=600)
