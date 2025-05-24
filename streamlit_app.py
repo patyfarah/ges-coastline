@@ -11,7 +11,7 @@ import gc
 
 #--------------------------------------------------------
 # Initialization
-#-------------------------------------------------------
+#--------------------------------------------------------
 # Load service account info from Streamlit secrets
 service_account_info = dict(st.secrets["earthengine"])
 
@@ -23,11 +23,6 @@ credentials = service_account.Credentials.from_service_account_info(
 
 # Initialize Earth Engine
 ee.Initialize(credentials)
-
-
-#asset_id = 'users/your_username/your_coastline_asset'
-
-
 
 # Visualization Params
 vis_params = {
@@ -54,7 +49,6 @@ ges_params = {
 
 NDVI_PRODUCTS = {"MOD13A1": ee.ImageCollection("MODIS/061/MOD13A1")}
 LST_PRODUCTS = {"MOD11A1": ee.ImageCollection("MODIS/061/MOD11A1")}
-
 
 def mask_ndvi(image):
     qa = image.select('SummaryQA')
@@ -114,10 +108,14 @@ def get_ges(intersection, year):
     GES = ndvi_normal.multiply(0.5).add(lst_normal.multiply(0.5)).rename('GES')
     return ndvi_normal, lst_normal, GES
 
-
 # --- Streamlit UI --- #
 st.title("🌍 Good Environmental Status (GES) Mapping Tool")
 
+# Main content (not in sidebar)
+st.markdown("### GES Analysis Results")
+st.markdown("The map below shows the Good Environmental Status (GES) for the selected country.")
+
+# Sidebar for configuration
 with st.sidebar:
     st.header("Configuration")
     country = st.selectbox("Select Country", ["Morocco", "Algeria", "Tunisia", "Libya", "Egypt",
@@ -133,6 +131,7 @@ with st.sidebar:
         ndvi_last, lst_last, GES_last = get_ges(intersection, end_year)
         GES_diff = GES_last.subtract(GES_first)
 
+        # Create and display the map below the title
         m = geemap.Map()
         m.centerObject(region, 8)
         m.addLayer(GES_first, ges_params, "GES First")
@@ -143,5 +142,3 @@ with st.sidebar:
         m.to_streamlit(height=600)
 
         gc.collect()
-
-
