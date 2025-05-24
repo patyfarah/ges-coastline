@@ -61,7 +61,7 @@ def mask_lst(image):
     quality_mask = qc.bitwiseAnd(3).lte(1)
     lst = image.select('LST_Day_1km').multiply(0.02).subtract(273.15)
     lst = lst.updateMask(quality_mask)
-    lst = lst.updateMask(lst.gte(-50).And(lst.lte(70)))
+    lst = lst.updateMask(lst.gte(-20).And(lst.lte(50)))
     return lst.copyProperties(image, image.propertyNames())
 
 def get_image_collection(collection_dict, product, region, start_date, end_date, mask_function=None):
