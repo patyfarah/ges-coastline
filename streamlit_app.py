@@ -114,7 +114,7 @@ def get_ges(intersection, year):
 
 # Function to process and display the GES classification
 def process_and_display():
-    GES_first = ee.Image('GES_diff')  
+    GES_first = GES_diff
     
    # Calculate the number of pixels in each class
     class_counts = {}
