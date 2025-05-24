@@ -31,7 +31,7 @@ ges_params1 = {
     'bands': ['GES'],
     'palette': ['#a50026', '#f88d52', '#ffffbf', '#86cb66', '#006837'],
     'min': -100,
-    'max': 100,
+    'max': 25,
     'labels': ['Very Severe', 'Severe', 'No Change', 'Good Environmental', 'Excellent Improvement']
 }
 
