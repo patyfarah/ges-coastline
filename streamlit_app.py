@@ -192,6 +192,9 @@ if st.button("Run Analysis"):
     m.addLayer(GES_diff, ges_params1, "GES Change")
     m.addLayer(filtered.style(**{"color": "black", "fillColor": "#00000000", "width": 2}), {}, "Border")
     m.add_legend(title="GES Classification", legend_dict=dict(zip(ges_params1['labels'], ges_params1['palette'])))
+    m.to_folium().options['attributionControl'] = False
+    m.to_folium().options['boxZoom'] = False
+    m.to_folium().options['tap'] = False
     m.to_streamlit(height=600)
     process_and_display(GES_diff)
     
