@@ -184,7 +184,7 @@ if st.button("Run Analysis"):
     m.add_legend(title="GES Classification", legend_dict=dict(zip(ges_params['labels'], ges_params['palette'])))
     m.to_streamlit(height=600)
 
-    gc.collect()
+   
 
 if st.button('Run GES Classification'):
     process_and_display(GES_diff)
