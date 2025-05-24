@@ -207,6 +207,7 @@ if st.button("Run Analysis"):
     m.addLayer(filtered.style(**{"color": "black", "fillColor": "#00000000", "width": 2}), {}, "Border")
     m.add_legend(title="GES Classification", legend_dict=dict(zip(ges_params1['labels'], ges_params1['palette'])))
     m.to_streamlit(height=600)
+    m.save("map_drawing_disabled.html")
     process_and_display(GES_diff)
     
     
