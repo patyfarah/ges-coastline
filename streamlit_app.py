@@ -5,8 +5,6 @@ import streamlit as st
 import geopandas as gpd
 import ee
 import geemap.foliumap as geemap
-import folium
-from folium.plugins import Draw
 from google.oauth2 import service_account
 import gc
 import matplotlib.pyplot as plt
@@ -185,18 +183,7 @@ if st.button("Run Analysis"):
     GES_diff = GES_last.subtract(GES_first)
     
     
-    # Create and display the map below the title
-    # Set up Draw plugin, but disable specific tools
-    draw = Draw(
-        draw_options={
-            'polyline': False,  # Disable polyline drawing
-            'polygon': False,   # Disable polygon drawing
-            'circle': False,    # Disable circle drawing
-            'marker': False,    # Disable marker drawing
-            'rectangle': False, # Disable rectangle drawing
-        }
-    )
-    
+    # Create and display the map below the title 
 
     m = geemap.Map()
     m.centerObject(region, 6)
