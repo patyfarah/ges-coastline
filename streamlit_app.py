@@ -24,7 +24,7 @@ credentials = service_account.Credentials.from_service_account_info(
 # Initialize Earth Engine
 ee.Initialize(credentials)
 
-asset_id ='projects/ee-project-457404/assets/coastlines'
+
 #asset_id = 'users/your_username/your_coastline_asset'
 
 
@@ -81,7 +81,7 @@ def return_intersect(country, buffer_dist_km):
     region = filtered.geometry()
     buffered = region.buffer(-buffer_dist_km * 1000)
     outer_band = region.difference(buffered)
-
+    asset_id ='projects/ee-project-457404/assets/coastlines'    
     ee_fc = ee.FeatureCollection(asset_id).filterBounds(region)
     coastline = ee_fc.geometry()
     coastline_buffer = coastline.buffer(buffer_dist_km * 1000)
