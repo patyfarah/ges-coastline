@@ -123,8 +123,7 @@ with st.sidebar:
     st.header("Configuration")
     country = st.selectbox("Select Country", ["Morocco", "Algeria", "Tunisia", "Libya", "Egypt",
                                               "Syria", "Lebanon", "Yemen", "Mauritania"],
-                            value="Lebanon",
-                            description='Country:'
+                            index=6
                           )
     start_year = st.number_input("Start Year", min_value=2000, max_value=2030, value=2002)
     end_year = st.number_input("End Year", min_value=2000, max_value=2030, value=2022)
