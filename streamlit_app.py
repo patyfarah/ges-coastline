@@ -101,12 +101,8 @@ def get_ges(intersection, year):
 
 # Function to process and display the GES classification
 def process_and_display():
-    # Your GES data - Assuming it's already defined
-    GES_first = ee.Image('GES_diff')  # Replace with your actual GES image reference
-
-    # Normalize the GES image to the min/max values defined in ges_params
-    GES_normalized = GES_first.subtract(ges_params['min']).divide(ges_params['max'] - ges_params['min'])
-
+    GES_first = ee.Image('GES_diff')  
+    
     # Create a classification based on the normalized values
     class_counts = {}
     for i, label in enumerate(ges_params['labels']):
@@ -115,7 +111,7 @@ def process_and_display():
         upper_bound = (i + 1) / len(ges_params['labels'])  # Upper bound for classification
 
         # Mask values within the current range
-        class_mask = GES_normalized.gte(lower_bound).And(GES_normalized.lt(upper_bound))
+        class_mask = GES_first.gte(lower_bound).And(GES_normalized.lt(upper_bound))
 
         # Count the pixels within the mask
         count = GES_first.updateMask(class_mask).reduceRegion(
