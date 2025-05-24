@@ -122,9 +122,9 @@ with st.sidebar:
     st.header("Configuration")
     country = st.selectbox("Select Country", ["Morocco", "Algeria", "Tunisia", "Libya", "Egypt",
                                               "Syria", "Lebanon", "Yemen", "Mauritania"])
-    start_year = st.number_input("Start Year", min_value=2000, max_value=2023, value=2002)
-    end_year = st.number_input("End Year", min_value=2000, max_value=2023, value=2022)
-    buffer_km = st.slider("Coast Buffer (km)", 1, 100, 10)
+    start_year = st.number_input("Start Year", min_value=2000, max_value=2030, value=2002)
+    end_year = st.number_input("End Year", min_value=2000, max_value=2030, value=2022)
+    buffer_km = st.slider("Coast Buffer (km)", 1, 10, 5)
 
 if st.button("Run Analysis"):
     st.info("Processing... Please wait a few moments.")
