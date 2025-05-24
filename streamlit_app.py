@@ -38,11 +38,11 @@ ges_params1 = {
 # Define the class labels and corresponding ranges for GES_diff
 # Changed -float('inf') to a practical lower bound, e.g., -100
 ges_params = {
-    'Very Severe': (-50, -30),
-    'Severe': (-30, -10),
-    'No Change': (-10, 10),
-    'Good Envionmental': (10, 30),
-    'Excellent improvement': (30, float('inf')) # float('inf') is generally handled better as an upper bound
+    'Very Severe': (-100, -25),
+    'Severe': (-25, -5),
+    'No Change': (-5, 5),
+    'Good Envionmental': (5, 25),
+    'Excellent improvement': (25, float('inf')) # float('inf') is generally handled better as an upper bound
 }
 
 # Define the palette separately so it's accessible for the bar chart color
@@ -189,9 +189,9 @@ if st.button("Run Analysis"):
     m.centerObject(region, 6)
     m.addLayer(GES_first, ges_params1, "GES Start Year",shown=False)
     m.addLayer(GES_last, ges_params1, "GES End Year",shown=False)
-    m.addLayer(GES_diff, ges_params1, "GES Change")
+    m.addLayer(GES_diff, ges_params, "GES Change")
     m.addLayer(filtered.style(**{"color": "black", "fillColor": "#00000000", "width": 2}), {}, "Border")
-    m.add_legend(title="GES Classification", legend_dict=dict(zip(ges_params1['labels'], ges_params1['palette'])))
+    m.add_legend(title="GES Classification", legend_dict=dict(zip(ges_params['labels'], ges_palette)))
     m.to_streamlit(height=600)
     process_and_display(GES_diff)
     
