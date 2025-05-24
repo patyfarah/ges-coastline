@@ -27,20 +27,6 @@ credentials = service_account.Credentials.from_service_account_info(
 ee.Initialize(credentials)
 
 # Visualization Params
-vis_params = {
-    'bands': ['NDVI'],
-    'palette': ['#a50026', '#f88d52', '#ffffbf', '#86cb66', '#006837'],
-    'min': -50.0,
-    'max': 50.0
-}
-
-lst_params = {
-    'bands': ['LST_Day_1km'],
-    'palette': ['#053061', '#6bacd0', '#f7f7f7', '#e58268', '#67001f'],
-    'min': -50,
-    'max': 50
-}
-
 ges_params = {
     'bands': ['GES'],
     'palette': ['#a50026', '#f88d52', '#ffffbf', '#86cb66', '#006837'],
@@ -116,7 +102,7 @@ def get_ges(intersection, year):
 # Function to process and display the GES classification
 def process_and_display(image):
     # Your GES data - Assuming it's already defined
-    GES_first = ee.Image('YOUR_GES_IMAGE')  # Replace with your actual GES image reference
+    GES_first = ee.Image(image)  # Replace with your actual GES image reference
 
     # Normalize the GES image to the min/max values defined in ges_params
     GES_normalized = GES_first.subtract(ges_params['min']).divide(ges_params['max'] - ges_params['min'])
@@ -197,7 +183,8 @@ if st.button("Run Analysis"):
     m.addLayer(filtered.style(**{"color": "black", "fillColor": "#00000000", "width": 2}), {}, "Border")
     m.add_legend(title="GES Classification", legend_dict=dict(zip(ges_params['labels'], ges_params['palette'])))
     m.to_streamlit(height=600)
-    
+
+    gc.collect()
 
 if st.button('Run GES Classification'):
     process_and_display(GES_diff)
