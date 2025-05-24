@@ -30,8 +30,8 @@ ee.Initialize(credentials)
 ges_params1 = {
     'bands': ['GES'],
     'palette': ['#a50026', '#f88d52', '#ffffbf', '#86cb66', '#006837'],
-    'min': -40,
-    'max': 60,
+    'min': -45,
+    'max': 55,
     'labels': ['Very Severe', 'Severe', 'No Change', 'Good Environmental', 'Excellent Improvement']
 }
 
