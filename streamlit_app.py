@@ -187,7 +187,7 @@ if st.button("Run Analysis"):
     # Create and display the map below the title 
 
     m = geemap.Map()
-    m.setOptions(dragging=False, attributionControl=False)
+    m.setOptions( attributionControl=False)
     m.centerObject(region, 6)
     m.addLayer(GES_first, ges_params1, "GES Start Year",shown=False)
     m.addLayer(GES_last, ges_params1, "GES End Year",shown=False)
