@@ -108,6 +108,7 @@ def get_ges(intersection, year):
 
     GES = ndvi_normal.multiply(0.5).add(lst_normal.multiply(0.5)).rename('GES')
     del ndvi,lst,ndvi_mean,lst_mean,ndvi_minmax,lst_minmax,ndvi_min,ndvi_max,lst_min,lst_max,ndvi_normal, lst_normal
+    gc.collect()
     return GES
 
 # --- Streamlit UI --- #
