@@ -107,8 +107,8 @@ def get_ges(intersection, year):
     lst_normal = (lst_mean.subtract(lst_min).divide(lst_max.subtract(lst_min))).multiply(100).subtract(100)
 
     GES = ndvi_normal.multiply(0.5).add(lst_normal.multiply(0.5)).rename('GES')
-    del ndvi,lst,ndvi_mean,lst_mean,ndvi_minmax,lst_minmax,ndvi_min,ndvi_max,lst_min,lst_max
-    return ndvi_normal, lst_normal, GES
+    del ndvi,lst,ndvi_mean,lst_mean,ndvi_minmax,lst_minmax,ndvi_min,ndvi_max,lst_min,lst_max,ndvi_normal, lst_normal
+    return GES
 
 # --- Streamlit UI --- #
 st.title("🌍 Good Environmental Status (GES) Mapping Tool")
@@ -129,8 +129,8 @@ with st.sidebar:
 if st.button("Run Analysis"):
     st.info("Processing... Please wait a few moments.")
     intersection, region, filtered = return_intersect(country, buffer_km)
-    ndvi_first, lst_first, GES_first = get_ges(intersection, start_year)
-    ndvi_last, lst_last, GES_last = get_ges(intersection, end_year)
+    GES_first = get_ges(intersection, start_year)
+    GES_last = get_ges(intersection, end_year)
     GES_diff = GES_last.subtract(GES_first)
     
     
