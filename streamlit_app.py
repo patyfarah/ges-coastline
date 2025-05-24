@@ -5,8 +5,21 @@ import geemap.foliumap as geemap
 import folium
 import gc
 
-# Initialize EE
-ee.Initialize()
+#--------------------------------------------------------
+# Initialization
+#-------------------------------------------------------
+# Load service account info from Streamlit secrets
+service_account_info = dict(st.secrets["earthengine"])
+
+SCOPES = ['https://www.googleapis.com/auth/earthengine']
+
+# Create Google credentials object
+credentials = service_account.Credentials.from_service_account_info(
+    service_account_info, scopes=SCOPES)
+
+# Initialize Earth Engine
+ee.Initialize(credentials)
+
 
 # Visualization Params
 vis_params = {
