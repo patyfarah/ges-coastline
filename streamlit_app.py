@@ -30,19 +30,19 @@ ee.Initialize(credentials)
 ges_params1 = {
     'bands': ['GES'],
     'palette': ['#a50026', '#f88d52', '#ffffbf', '#86cb66', '#006837'],
-    'min': -45,
-    'max': 55,
+    'min': -50,
+    'max': 50,
     'labels': ['Very Severe', 'Severe', 'No Change', 'Good Environmental', 'Excellent Improvement']
 }
 
 # Define the class labels and corresponding ranges for GES_diff
 # Changed -float('inf') to a practical lower bound, e.g., -100
 ges_params = {
-    'Very Severe': (-100, -25),
-    'Severe': (-25, -5),
-    'No Change': (-5, 5),
-    'Good Envionmental': (5, 25),
-    'Excellent improvement': (25, float('inf')) # float('inf') is generally handled better as an upper bound
+    'Very Severe': (-50, -30),
+    'Severe': (-30, -10),
+    'No Change': (-10, 10),
+    'Good Envionmental': (10, 30),
+    'Excellent improvement': (30, float('inf')) # float('inf') is generally handled better as an upper bound
 }
 
 # Define the palette separately so it's accessible for the bar chart color
