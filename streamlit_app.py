@@ -1,8 +1,12 @@
+#-------------------------------------------------------
+# Libraries
+#-------------------------------------------------------
 import streamlit as st
 import geopandas as gpd
 import ee
 import geemap.foliumap as geemap
 import folium
+from google.oauth2 import service_account
 import gc
 
 #--------------------------------------------------------
