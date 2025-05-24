@@ -138,8 +138,8 @@ if st.button("Run Analysis"):
     # Create and display the map below the title
     m = geemap.Map()
     m.centerObject(region, 8)
-    m.addLayer(GES_first, ges_params, "GES Start Year")
-    m.addLayer(GES_last, ges_params, "GES End Year")
+    m.addLayer(GES_first, ges_params, "GES Start Year",shown=False)
+    m.addLayer(GES_last, ges_params, "GES End Year",shown=False)
     m.addLayer(GES_diff, ges_params, "GES Change")
     m.addLayer(filtered.style(**{"color": "black", "fillColor": "#00000000", "width": 2}), {}, "Border")
     m.add_legend(title="GES Classification", legend_dict=dict(zip(ges_params['labels'], ges_params['palette'])))
