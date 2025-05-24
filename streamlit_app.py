@@ -24,6 +24,10 @@ credentials = service_account.Credentials.from_service_account_info(
 # Initialize Earth Engine
 ee.Initialize(credentials)
 
+asset_id ='projects/ee-project-457404/assets/coastlines'
+#asset_id = 'users/your_username/your_coastline_asset'
+
+
 
 # Visualization Params
 vis_params = {
@@ -78,8 +82,7 @@ def return_intersect(country, buffer_dist_km):
     buffered = region.buffer(-buffer_dist_km * 1000)
     outer_band = region.difference(buffered)
 
-    gdf = gpd.read_file("./coastlines/coastlines.shp")
-    ee_fc = geemap.geopandas_to_ee(gdf).filterBounds(region)
+    ee_fc = ee.FeatureCollection(asset_id).filterBounds(region)
     coastline = ee_fc.geometry()
     coastline_buffer = coastline.buffer(buffer_dist_km * 1000)
     intersection = outer_band.intersection(coastline_buffer)
