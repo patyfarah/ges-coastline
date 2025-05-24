@@ -124,25 +124,24 @@ with st.sidebar:
     end_year = st.number_input("End Year", min_value=2000, max_value=2023, value=2022)
     buffer_km = st.slider("Coast Buffer (km)", 1, 100, 10)
 
-    if st.button("Run Analysis"):
-        st.info("Processing... Please wait a few moments.")
-        intersection, region, filtered = return_intersect(country, buffer_km)
-        ndvi_first, lst_first, GES_first = get_ges(intersection, start_year)
-        ndvi_last, lst_last, GES_last = get_ges(intersection, end_year)
-        GES_diff = GES_last.subtract(GES_first)
-
-
-        
-        # Create and display the map below the title
-        m = geemap.Map()
-        m.centerObject(region, 8)
-        m.addLayer(GES_first, ges_params, "GES First")
-        m.addLayer(GES_last, ges_params, "GES Last")
-        m.addLayer(GES_diff, ges_params, "GES Change")
-        m.addLayer(filtered.style(**{"color": "black", "fillColor": "#00000000", "width": 2}), {}, "Border")
-        m.add_legend(title="GES Classification", legend_dict=dict(zip(ges_params['labels'], ges_params['palette'])))
-
-
-        gc.collect()
-
-m.to_streamlit(height=600)
+if st.button("Run Analysis"):
+    st.info("Processing... Please wait a few moments.")
+    intersection, region, filtered = return_intersect(country, buffer_km)
+    ndvi_first, lst_first, GES_first = get_ges(intersection, start_year)
+    ndvi_last, lst_last, GES_last = get_ges(intersection, end_year)
+    GES_diff = GES_last.subtract(GES_first)
+    
+    
+    # Create and display the map below the title
+    m = geemap.Map()
+    m.centerObject(region, 8)
+    m.addLayer(GES_first, ges_params, "GES First")
+    m.addLayer(GES_last, ges_params, "GES Last")
+    m.addLayer(GES_diff, ges_params, "GES Change")
+    m.addLayer(filtered.style(**{"color": "black", "fillColor": "#00000000", "width": 2}), {}, "Border")
+    m.add_legend(title="GES Classification", legend_dict=dict(zip(ges_params['labels'], ges_params['palette'])))
+    m.to_streamlit(height=600)
+    
+    gc.collect()
+    
+    
