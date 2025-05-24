@@ -111,7 +111,7 @@ def process_and_display():
         upper_bound = (i + 1) / len(ges_params['labels'])  # Upper bound for classification
 
         # Mask values within the current range
-        class_mask = GES_first.gte(lower_bound).And(GES_normalized.lt(upper_bound))
+        class_mask = GES_first.gte(lower_bound).And(GES_first.lt(upper_bound))
 
         # Count the pixels within the mask
         count = GES_first.updateMask(class_mask).reduceRegion(
