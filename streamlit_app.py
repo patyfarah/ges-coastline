@@ -185,8 +185,22 @@ if st.button("Run Analysis"):
     
     
     # Create and display the map below the title
-    m = geemap.Map(draw_control=False)
+    # Set up Draw plugin, but disable specific tools
+    draw = Draw(
+        draw_options={
+            'polyline': False,  # Disable polyline drawing
+            'polygon': False,   # Disable polygon drawing
+            'circle': False,    # Disable circle drawing
+            'marker': False,    # Disable marker drawing
+            'rectangle': False, # Disable rectangle drawing
+        }
+    )
+    
+
+    m = geemap.Map()
     m.centerObject(region, 6)
+    # Add the draw plugin to the map
+    draw.add_to(m)
     m.addLayer(GES_first, ges_params1, "GES Start Year",shown=False)
     m.addLayer(GES_last, ges_params1, "GES End Year",shown=False)
     m.addLayer(GES_diff, ges_params1, "GES Change")
