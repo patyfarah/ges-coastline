@@ -177,7 +177,6 @@ with st.sidebar:
     buffer_km = st.slider("Coast Buffer (km)", 1, 10, 5)
 
 if st.button("Run Analysis"):
-    global GES_diff
     st.info("Processing... Please wait a few moments.")
     intersection, region, filtered = return_intersect(country, buffer_km)
     GES_first = get_ges(intersection, start_year)
@@ -194,10 +193,6 @@ if st.button("Run Analysis"):
     m.addLayer(filtered.style(**{"color": "black", "fillColor": "#00000000", "width": 2}), {}, "Border")
     m.add_legend(title="GES Classification", legend_dict=dict(zip(ges_params1['labels'], ges_params1['palette'])))
     m.to_streamlit(height=600)
-
-    
-if st.button('Run GES Classification'):
-    image = GES_diff 
-    process_and_display(image)
+    process_and_display(GES_diff)
     
     
