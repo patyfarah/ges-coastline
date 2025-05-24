@@ -189,9 +189,9 @@ if st.button("Run Analysis"):
     m.centerObject(region, 6)
     m.addLayer(GES_first, ges_params1, "GES Start Year",shown=False)
     m.addLayer(GES_last, ges_params1, "GES End Year",shown=False)
-    m.addLayer(GES_diff, ges_params, "GES Change")
+    m.addLayer(GES_diff, ges_params1, "GES Change")
     m.addLayer(filtered.style(**{"color": "black", "fillColor": "#00000000", "width": 2}), {}, "Border")
-    m.add_legend(title="GES Classification", legend_dict=dict(zip(ges_params, ges_palette)))
+    m.add_legend(title="GES Classification", legend_dict=dict(zip(ges_params1['labels'], ges_params1['palette'])))
     m.to_streamlit(height=600)
     process_and_display(GES_diff)
     
