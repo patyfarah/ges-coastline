@@ -80,6 +80,7 @@ def return_intersect(country, buffer_dist_km):
     coastline = ee_fc.geometry()
     coastline_buffer = coastline.buffer(buffer_dist_km * 1000)
     intersection = outer_band.intersection(coastline_buffer)
+    del countries, buffered, outer_band, asset_id,ee_fc,coastline, coastline_buffer
     return intersection, region, filtered
 
 def get_ges(intersection, year):
@@ -106,6 +107,7 @@ def get_ges(intersection, year):
     lst_normal = (lst_mean.subtract(lst_min).divide(lst_max.subtract(lst_min))).multiply(100).subtract(100)
 
     GES = ndvi_normal.multiply(0.5).add(lst_normal.multiply(0.5)).rename('GES')
+    del ndvi,lst,ndvi_mean,lst_mean,ndvi_minmax,lst_minmax,ndvi_min,ndvi_max,lst_min,lst_max
     return ndvi_normal, lst_normal, GES
 
 # --- Streamlit UI --- #
