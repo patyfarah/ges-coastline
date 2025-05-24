@@ -100,10 +100,9 @@ def get_ges(intersection, year):
     return GES
 
 # Function to process and display the GES classification
-def process_and_display(image):
-    st.markdown({image})
+def process_and_display():
     # Your GES data - Assuming it's already defined
-    GES_first = ee.Image({image})  # Replace with your actual GES image reference
+    GES_first = ee.Image('GES_diff')  # Replace with your actual GES image reference
 
     # Normalize the GES image to the min/max values defined in ges_params
     GES_normalized = GES_first.subtract(ges_params['min']).divide(ges_params['max'] - ges_params['min'])
@@ -188,6 +187,6 @@ if st.button("Run Analysis"):
     gc.collect()
 
 if st.button('Run GES Classification'):
-    process_and_display(GES_diff)
+    process_and_display()
     
     
