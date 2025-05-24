@@ -194,12 +194,6 @@ if st.button("Run Analysis"):
     m.addLayer(filtered.style(**{"color": "black", "fillColor": "#00000000", "width": 2}), {}, "Border")
     m.add_legend(title="GES Classification", legend_dict=dict(zip(ges_params1['labels'], ges_params1['palette'])))
     # Access the underlying Folium map object
-    folium_map = m.folium_map
-    
-    # Disable specific controls
-    folium_map.zoomControl = False  # Disable zoom control
-    folium_map.scrollWheelZoom = False  # Disable scroll zoom
-    folium_map.dragging = False  # Disable dragging
     m.to_streamlit(height=600)
     process_and_display(GES_diff)
     
