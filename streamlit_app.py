@@ -6,6 +6,7 @@ import geopandas as gpd
 import ee
 import geemap.foliumap as geemap
 import folium
+from folium.plugins import Draw
 from google.oauth2 import service_account
 import gc
 import matplotlib.pyplot as plt
