@@ -221,8 +221,16 @@ if st.button("Run Analysis"):
         m.addLayer(filtered.style(**{"color": "black", "fillColor": "#00000000", "width": 2}), {}, "Border")
         
         m.add_legend(title="GES Classification", legend_dict=dict(zip(ges_params1['labels'], ges_params1['palette'])))
-        # Manually remove the Draw control (disable drawing)
-        m.folium_map.remove_child(m.folium_map._draw)
+
+        # Manually remove the drawing tools by accessing JavaScript
+        m.get_root().html.add_child(folium.Element("""
+            <script>
+                var drawControl = map._controls.find(control => control instanceof L.Control.Draw);
+                if (drawControl) {
+                    map.removeControl(drawControl);
+                }
+            </script>
+        """))
         m.to_streamlit(height=600)
         
         process_and_display(GES_diff)
