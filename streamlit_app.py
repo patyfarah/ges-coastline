@@ -222,15 +222,6 @@ if st.button("Run Analysis"):
         
         m.add_legend(title="GES Classification", legend_dict=dict(zip(ges_params1['labels'], ges_params1['palette'])))
 
-        # Manually remove the drawing tools by accessing JavaScript
-        m.get_root().html.add_child(folium.Element("""
-            <script>
-                var drawControl = map._controls.find(control => control instanceof L.Control.Draw);
-                if (drawControl) {
-                    map.removeControl(drawControl);
-                }
-            </script>
-        """))
         m.to_streamlit(height=600)
         
         process_and_display(GES_diff)
