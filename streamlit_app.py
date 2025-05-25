@@ -189,25 +189,17 @@ def process_and_display(image):
         st.error(f"An unexpected error occurred: {str(e)}")
 
 def export_image_streamlit(image, description='GES_image', scale=1000, crs='EPSG:3857'):
-    st.info("Generating download link...")
-
-    # Define parameters for getDownloadURL
-    params = {
-        'scale': scale,
-        'crs': crs,
-        'fileFormat': 'GeoTIFF'
-    }
-    try:
-        # Get download URL for the image
-        url = image.getDownloadURL(params)
-
-        st.success("Download link generated. Fetching file...")
-
-        # Download the file content
+     try:
+        url = image.getDownloadURL({
+            'scale': scale,
+            'crs': crs,
+            'fileFormat': 'GeoTIFF'
+        })
+        st.info("Downloading image...")
         response = requests.get(url)
         response.raise_for_status()
 
-        st.success(f"File ready for download: {description}.tif")
+        st.success("Download ready")
         st.download_button(
             label="Download GeoTIFF",
             data=response.content,
@@ -215,7 +207,9 @@ def export_image_streamlit(image, description='GES_image', scale=1000, crs='EPSG
             mime="image/tiff"
         )
     except Exception as e:
-        st.error(f"Failed to generate download link or fetch file: {e}")
+        st.error(f"Error downloading image: {e}")
+
+   
         
 
 # --- Streamlit UI --- #
