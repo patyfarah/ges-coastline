@@ -188,7 +188,7 @@ def process_and_display(image):
     except Exception as e:
         st.error(f"An unexpected error occurred: {str(e)}")
 
-def download_ee_image(image, description='image',intersection, scale=1000, crs='EPSG:3857'):
+def download_ee_image(image,intersection, description='image', scale=1000, crs='EPSG:3857'):
     try:
         url = image.getDownloadURL({
             'scale': scale,
@@ -252,7 +252,7 @@ if st.button("Run Analysis"):
                     
         process_and_display(GES_diff)
 
-        download_ee_image(GES_diff, description='GES Change', region=intersection)
+        download_ee_image(GES_diff, intersection,description='GES Change' )
 
     except MemoryError as e:
         st.error(f"Memory Error: {str(e)}")
