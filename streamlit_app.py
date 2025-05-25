@@ -10,6 +10,7 @@ from google.oauth2 import service_account
 import gc
 import matplotlib.pyplot as plt
 import numpy as np
+import time
 
 #--------------------------------------------------------
 # Initialization
@@ -92,80 +93,91 @@ def return_intersect(country, buffer_dist_km):
 
 # Function to compute GES for a given year
 def get_ges(intersection, year):
-    start_date = f"{year}-01-01"
-    end_date = f"{year}-12-31"
-    ndvi = get_image_collection(NDVI_PRODUCTS, "MOD13A1", intersection, start_date, end_date, mask_ndvi)
-    lst = get_image_collection(LST_PRODUCTS, "MOD11A1", intersection, start_date, end_date, mask_lst)
+    try:
+        start_date = f"{year}-01-01"
+        end_date = f"{year}-12-31"
+        ndvi = get_image_collection(NDVI_PRODUCTS, "MOD13A1", intersection, start_date, end_date, mask_ndvi)
+        lst = get_image_collection(LST_PRODUCTS, "MOD11A1", intersection, start_date, end_date, mask_lst)
 
-    # Reduce collections to median and normalize
-    ndvi_median = ndvi.median().select('NDVI').multiply(0.0001)
-    lst_temp = lst.median()
+        # Reduce collections to median and normalize
+        ndvi_median = ndvi.median().select('NDVI').multiply(0.0001)
+        lst_temp = lst.median()
 
-    ndvi_mean = ndvi_median.clip(intersection)
-    lst_mean = lst_temp.unmask().focal_mean(radius=1, units='pixels', iterations=1).clip(intersection)
+        ndvi_mean = ndvi_median.clip(intersection)
+        lst_mean = lst_temp.unmask().focal_mean(radius=1, units='pixels', iterations=1).clip(intersection)
 
-    ndvi_minmax = ndvi_mean.reduceRegion(ee.Reducer.minMax(), intersection, 1000, maxPixels=1e13)
-    lst_minmax = lst_mean.reduceRegion(ee.Reducer.minMax(), intersection, 1000, maxPixels=1e13)
+        ndvi_minmax = ndvi_mean.reduceRegion(ee.Reducer.minMax(), intersection, 1000, maxPixels=1e13)
+        lst_minmax = lst_mean.reduceRegion(ee.Reducer.minMax(), intersection, 1000, maxPixels=1e13)
 
-    ndvi_min = ee.Number(ndvi_minmax.get('NDVI_min'))
-    ndvi_max = ee.Number(ndvi_minmax.get('NDVI_max'))
-    lst_min = ee.Number(lst_minmax.get('LST_Day_1km_min'))
-    lst_max = ee.Number(lst_minmax.get('LST_Day_1km_max'))
+        ndvi_min = ee.Number(ndvi_minmax.get('NDVI_min'))
+        ndvi_max = ee.Number(ndvi_minmax.get('NDVI_max'))
+        lst_min = ee.Number(lst_minmax.get('LST_Day_1km_min'))
+        lst_max = ee.Number(lst_minmax.get('LST_Day_1km_max'))
 
-    # Normalize the NDVI and LST
-    ndvi_normal = (ndvi_mean.subtract(ndvi_min).divide(ndvi_max.subtract(ndvi_min))).multiply(100)
-    lst_normal = (lst_mean.subtract(lst_min).divide(lst_max.subtract(lst_min))).multiply(100).subtract(100)
+        # Normalize the NDVI and LST
+        ndvi_normal = (ndvi_mean.subtract(ndvi_min).divide(ndvi_max.subtract(ndvi_min))).multiply(100)
+        lst_normal = (lst_mean.subtract(lst_min).divide(lst_max.subtract(lst_min))).multiply(100).subtract(100)
 
-    # Calculate GES
-    GES = ndvi_normal.multiply(0.5).add(lst_normal.multiply(0.5)).rename('GES')
-    
-    # Release unnecessary variables
-    del ndvi, lst, ndvi_mean, lst_mean, ndvi_minmax, lst_minmax, ndvi_min, ndvi_max, lst_min, lst_max, ndvi_normal, lst_normal
-    gc.collect()
-    
-    return GES
+        # Calculate GES
+        GES = ndvi_normal.multiply(0.5).add(lst_normal.multiply(0.5)).rename('GES')
+        
+        # Release unnecessary variables
+        del ndvi, lst, ndvi_mean, lst_mean, ndvi_minmax, lst_minmax, ndvi_min, ndvi_max, lst_min, lst_max, ndvi_normal, lst_normal
+        gc.collect()
+        
+        return GES
+
+    except ee.EEException as e:
+        if 'memory limit exceeded' in str(e).lower():
+            raise MemoryError("The operation exceeded the memory limit. Please try selecting a smaller area or a shorter time range.")
+        else:
+            raise
 
 # Function to process and display the GES classification
 def process_and_display(image):
-    GES_first = image
-    
-    # Calculate the number of pixels in each class
-    class_counts = {}
-    for class_name, (lower, upper) in ges_params.items():
-        if upper == float('inf'):
-            class_mask = GES_first.gte(lower)
-        else:
-            class_mask = GES_first.gte(lower).And(GES_first.lt(upper))
+    try:
+        GES_first = image
         
-        count = GES_first.updateMask(class_mask).reduceRegion(
-            reducer=ee.Reducer.count(),
-            scale=1000,
-            maxPixels=1e13
-        ).get('GES').getInfo()
-        class_counts[class_name] = count
-    
-    # Extract class names and counts for plotting
-    class_names = list(class_counts.keys())
-    counts = list(class_counts.values())
-    
-    # Map class names to colors for the bar chart
-    colors = [ges_palette[list(ges_params.keys()).index(name)] for name in class_names]
+        # Calculate the number of pixels in each class
+        class_counts = {}
+        for class_name, (lower, upper) in ges_params.items():
+            if upper == float('inf'):
+                class_mask = GES_first.gte(lower)
+            else:
+                class_mask = GES_first.gte(lower).And(GES_first.lt(upper))
+            
+            count = GES_first.updateMask(class_mask).reduceRegion(
+                reducer=ee.Reducer.count(),
+                scale=1000,
+                maxPixels=1e13
+            ).get('GES').getInfo()
+            class_counts[class_name] = count
+        
+        # Extract class names and counts for plotting
+        class_names = list(class_counts.keys())
+        counts = list(class_counts.values())
+        
+        # Map class names to colors for the bar chart
+        colors = [ges_palette[list(ges_params.keys()).index(name)] for name in class_names]
 
-    # Streamlit App - Plotting the Bar Chart
-    st.title('GES Change Classification')
+        # Streamlit App - Plotting the Bar Chart
+        st.title('GES Change Classification')
 
-    # Create the bar chart
-    fig, ax = plt.subplots(figsize=(10, 6))
-    ax.bar(class_names, counts, color=colors)
+        # Create the bar chart
+        fig, ax = plt.subplots(figsize=(10, 6))
+        ax.bar(class_names, counts, color=colors)
 
-    # Customize the chart
-    ax.set_title('GES Change Classification')
-    ax.set_xlabel('Classification')
-    ax.set_ylabel('Pixel Count')
-    ax.grid(axis='y')  # Add horizontal grid lines
+        # Customize the chart
+        ax.set_title('GES Change Classification')
+        ax.set_xlabel('Classification')
+        ax.set_ylabel('Pixel Count')
+        ax.grid(axis='y')  # Add horizontal grid lines
 
-    # Display the chart in Streamlit
-    st.pyplot(fig)
+        # Display the chart in Streamlit
+        st.pyplot(fig)
+
+    except MemoryError as e:
+        st.error(f"Error: {str(e)}")
 
 # --- Streamlit UI --- #
 st.title("🌍 Good Environmental Status (GES) Mapping Tool")
@@ -187,19 +199,24 @@ with st.sidebar:
 
 if st.button("Run Analysis"):
     st.info("Processing... Please wait a few moments.")
-    intersection, region, filtered = return_intersect(country, buffer_km)
-    GES_first = get_ges(intersection, start_year)
-    GES_last = get_ges(intersection, end_year)
-    GES_diff = GES_last.subtract(GES_first)
     
-    # Create and display the map
-    m = geemap.Map()
-    m.centerObject(region, 6)
-    m.addLayer(GES_first, ges_params1, "GES Start Year", shown=False)
-    m.addLayer(GES_last, ges_params1, "GES End Year", shown=False)
-    m.addLayer(GES_diff, ges_params1, "GES Change")
-    m.addLayer(filtered.style(**{"color": "black", "fillColor": "#00000000", "width": 2}), {}, "Border")
-    m.add_legend(title="GES Classification", legend_dict=dict(zip(ges_params1['labels'], ges_params1['palette'])))
-    m.to_streamlit(height=600)
+    try:
+        intersection, region, filtered = return_intersect(country, buffer_km)
+        GES_first = get_ges(intersection, start_year)
+        GES_last = get_ges(intersection, end_year)
+        GES_diff = GES_last.subtract(GES_first)
+        
+        # Display the map
+        m = geemap.Map()
+        m.centerObject(region, 6)
+        m.addLayer(GES_first, ges_params1, "GES Start Year", shown=False)
+        m.addLayer(GES_last, ges_params1, "GES End Year", shown=False)
+        m.addLayer(GES_diff, ges_params1, "GES Change")
+        m.addLayer(filtered.style(**{"color": "black", "fillColor": "#00000000", "width": 2}), {}, "Border")
+        m.add_legend(title="GES Classification", legend_dict=dict(zip(ges_params1['labels'], ges_params1['palette'])))
+        m.to_streamlit(height=600)
+        
+        process_and_display(GES_diff)
     
-    process_and_display(GES_diff)
+    except MemoryError as e:
+        st.error(f"Error: {str(e)}")
