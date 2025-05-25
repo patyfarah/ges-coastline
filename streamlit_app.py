@@ -239,37 +239,43 @@ def export_images_to_tiffs(images: dict, region: ee.Geometry, scale: int = 1000)
     return exported_files, errors
 
 def create_zip(zip_filename: str, files: list):
-    with zipfile.ZipFile(zip_filename, 'w') as zipf:
-        for file in files:
-            zipf.write(file)
-    return zip_filename
+    try:
+        with zipfile.ZipFile(zip_filename, 'w') as zipf:
+            for file in files:
+                if os.path.exists(file):
+                    zipf.write(file)
+        return os.path.exists(zip_filename)
+    except Exception as e:
+        st.error(f"ZIP creation failed: {e}")
+        return False
 
-def export_and_download_all_images(images_dict, region, scale=1000, zip_filename="C:\GES_images.zip"):
+def export_and_download_all_images(images_dict, region, scale=1000, zip_filename="GES_images.zip"):
     """
-    Exports multiple Earth Engine images, zips them, and provides a Streamlit download button.
-
-    Parameters:
-    - images_dict: dict, keys as image labels, values as ee.Image objects
-    - region: ee.Geometry, area to export
-    - scale: int, export resolution (default: 1000)
-    - zip_filename: str, name of the output ZIP file
+    Streamlit function to export multiple GEE images, zip them, and provide one download button.
     """
+    # Put the Streamlit button **inside** this function
     if st.button("Export and Download All Images as ZIP"):
+        st.info("Starting export...")
         exported_files = export_images_to_tiffs(images_dict, region, scale)
 
-        if exported_files:
-            create_zip(zip_filename, exported_files)
+        if not exported_files:
+            st.error("No files were exported.")
+            return
 
-            if os.path.exists(zip_filename):
-                with open(zip_filename, "rb") as f:
-                    st.download_button(
-                        label="Download All Images (ZIP)",
-                        data=f,
-                        file_name=zip_filename,
-                        mime="application/zip"
-                    )
-            else:
-                st.error("ZIP file was not created.")
+        st.info("Creating ZIP archive...")
+        zip_created = create_zip(zip_filename, exported_files)
+
+        if zip_created:
+            st.success("ZIP file ready!")
+            with open(zip_filename, "rb") as f:
+                st.download_button(
+                    label="Download All Images (ZIP)",
+                    data=f,
+                    file_name=zip_filename,
+                    mime="application/zip"
+                )
+        else:
+            st.error("ZIP file was not created.")
 
 
 # --- Streamlit UI --- #
