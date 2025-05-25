@@ -188,29 +188,35 @@ def process_and_display(image):
     except Exception as e:
         st.error(f"An unexpected error occurred: {str(e)}")
 
-def export_image_streamlit(image, description='GES_image', scale=1000, crs='EPSG:3857'):
-    
- try:
-    url = image.getDownloadURL({
-        'scale': scale,
-        'crs': crs,
-        'fileFormat': 'GeoTIFF'
-    })
-    st.info("Downloading image...")
-    response = requests.get(url)
-    response.raise_for_status()
+import streamlit as st
+import ee
+import requests
 
-    st.success("Download ready")
-    st.download_button(
-        label="Download GeoTIFF",
-        data=response.content,
-        file_name=f"{description}.tif",
-        mime="image/tiff"
-    )
+ee.Initialize()
+
+def download_ee_image(image, description='image', scale=1000, crs='EPSG:3857'):
+    try:
+        url = image.getDownloadURL({
+            'scale': scale,
+            'crs': crs,
+            'fileFormat': 'GeoTIFF'
+        })
+        st.info("Downloading image...")
+        response = requests.get(url)
+        response.raise_for_status()
+
+        st.success("Download ready")
+        st.download_button(
+            label="Download GeoTIFF",
+            data=response.content,
+            file_name=f"{description}.tif",
+            mime="image/tiff"
+        )
     except Exception as e:
         st.error(f"Error downloading image: {e}")
 
-   
+
+ 
         
 
 # --- Streamlit UI --- #
@@ -248,10 +254,10 @@ if st.button("Run Analysis"):
         m.addLayer(filtered.style(**{"color": "black", "fillColor": "#00000000", "width": 2}), {}, "Border")
         m.add_legend(title="GES Classification", legend_dict=dict(zip(ges_params1['labels'], ges_params1['palette'])))
         m.to_streamlit(height=600)
-
-        export_image_streamlit(GES_diff)
                     
         process_and_display(GES_diff)
+
+        download_ee_image(GES_diff, description='GES Change')
 
     except MemoryError as e:
         st.error(f"Memory Error: {str(e)}")
