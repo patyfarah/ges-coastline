@@ -188,7 +188,7 @@ def process_and_display(image):
     except Exception as e:
         st.error(f"An unexpected error occurred: {str(e)}")
 
-def download_ee_image(image,intersection, description='image', scale=50, crs='EPSG:3857'):
+def download_ee_image(image,intersection, description='image', scale=5000, crs='EPSG:3857'):
     try:
         url = image.getDownloadURL({
             'scale': scale,
