@@ -188,7 +188,7 @@ def process_and_display(image):
         st.error(f"An unexpected error occurred: {str(e)}")
 
 
-def download_gee_image(image: ee.Image, region: ee.Geometry, filename: str = 'gee_image.tif', scale: int = 30):
+def download_gee_image(image: ee.Image, region: ee.Geometry, filename: str = 'gee_image.tif', scale: int = 1000):
     """
     Exports an Earth Engine image to a GeoTIFF and provides a Streamlit download button.
 
