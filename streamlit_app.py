@@ -261,9 +261,30 @@ if st.button("Run Analysis"):
                     
         process_and_display(GES_diff)
 
-        download_gee_image(GES_diff, intersection, filename="ges-change.tif", scale=1000)
-        download_gee_image(GES_first, intersection, filename="ges-first.tif", scale=1000)
-        download_gee_image(GES_last, intersection, filename="ges-last.tif", scale=1000)
+        # Export and provide download buttons for all three images
+        for img, label, fname in zip(
+            [GES_diff, GES_first, GES_last],
+            ["Download GES Change", "Download GES Start Year", "Download GES End Year"],
+            ["ges-change.tif", "ges-first.tif", "ges-last.tif"]
+        ):
+            try:
+                geemap.ee_export_image(
+                    img,
+                    filename=fname,
+                    scale=1000,
+                    region=intersection,
+                )
+                with open(fname, "rb") as f:
+                    st.download_button(
+                        label=label,
+                        data=f,
+                        file_name=fname,
+                        mime="image/tiff",
+                        key=fname  # unique key for each button
+                    )
+            except Exception as e:
+                st.error(f"Failed to export {label}: {e}")
+
 
 
     except MemoryError as e:
