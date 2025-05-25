@@ -267,7 +267,7 @@ if st.button("Run Analysis"):
                 "GES_first": GES_first,
                 "GES_last": GES_last
             },
-            region=my_region_geometry,
+            region=intersection,
             scale=1000
 )
 
