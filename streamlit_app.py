@@ -187,11 +187,11 @@ def process_and_display(image):
         st.error(f"An unexpected error occurred: {str(e)}")
 
 
-def download_ges_diff_geemap():
+def download_ges_diff_geemap(image):
     filename = "GES_diff.tif"
     # Export the image to local disk (replace `intersection` with your geometry)
     geemap.ee_export_image(
-        GES_diff,
+        image,
         filename=filename,
         scale=1000,
         region=intersection.geometry().getInfo()['coordinates'],
@@ -218,7 +218,7 @@ with st.sidebar:
     buffer_km = st.slider("Coast Buffer (km)", 1, 10, 5)
     if st.button("Download GES_diff GeoTIFF"):
         with st.spinner("Exporting image..."):
-            file_path = download_ges_diff_geemap()
+            file_path = download_ges_diff_geemap(GES_diff)
             with open(file_path, "rb") as f:
                 st.download_button(
                     label="Download GES_diff GeoTIFF",
