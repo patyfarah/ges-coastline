@@ -244,6 +244,32 @@ def create_zip(zip_filename: str, files: list):
             zipf.write(file)
     return zip_filename
 
+def export_and_download_all_images(images_dict, region, scale=1000, zip_filename="GES_images.zip"):
+    """
+    Exports multiple Earth Engine images, zips them, and provides a Streamlit download button.
+
+    Parameters:
+    - images_dict: dict, keys as image labels, values as ee.Image objects
+    - region: ee.Geometry, area to export
+    - scale: int, export resolution (default: 1000)
+    - zip_filename: str, name of the output ZIP file
+    """
+    if st.button("Export and Download All Images as ZIP"):
+        exported_files = export_images_to_tiffs(images_dict, region, scale)
+
+        if exported_files:
+            create_zip(zip_filename, exported_files)
+
+            if os.path.exists(zip_filename):
+                with open(zip_filename, "rb") as f:
+                    st.download_button(
+                        label="Download All Images (ZIP)",
+                        data=f,
+                        file_name=zip_filename,
+                        mime="application/zip"
+                    )
+            else:
+                st.error("ZIP file was not created.")
 
 
 # --- Streamlit UI --- #
@@ -294,28 +320,8 @@ if st.button("Run Analysis"):
         }
         
         region = intersection
-        scale = 1000
-        zip_filename = "GES_images.zip"
 
-        if st.button("Export and Download All Images as ZIP"):
-            exported_files = export_images_to_tiffs(images_dict, region, scale)
-        
-            if exported_files:
-                create_zip(zip_filename, exported_files)
-        
-                if os.path.exists(zip_filename):
-                    with open(zip_filename, "rb") as f:
-                        st.download_button(
-                            label="Download All Images (ZIP)",
-                            data=f,
-                            file_name=zip_filename,
-                            mime="application/zip"
-                        )
-                else:
-                    st.error("ZIP file was not created.")
-
-
-
+        export_and_download_all_images(images_dict, region=intersection)
 
 
     except MemoryError as e:
