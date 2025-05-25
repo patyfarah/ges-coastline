@@ -213,13 +213,13 @@ if st.button("Run Analysis"):
         GES_diff = GES_last.subtract(GES_first)
         
         # Display the map
-        m = geemap.Map()
+        m = geemap.Map(draw_control=False)
         m.centerObject(region, 6)
         m.addLayer(GES_first, ges_params1, "GES Start Year", shown=False)
         m.addLayer(GES_last, ges_params1, "GES End Year", shown=False)
         m.addLayer(GES_diff, ges_params1, "GES Change")
         m.addLayer(filtered.style(**{"color": "black", "fillColor": "#00000000", "width": 2}), {}, "Border")
-        m.remove_draw_control()
+        
         m.add_legend(title="GES Classification", legend_dict=dict(zip(ges_params1['labels'], ges_params1['palette'])))
         m.to_streamlit(height=600)
         
