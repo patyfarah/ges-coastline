@@ -260,7 +260,9 @@ if st.button("Run Analysis"):
                     
         process_and_display(GES_diff)
 
-        download_gee_image(GES_diff, intersection, filename="ges-image.tif", scale=1000)
+        download_gee_image(GES_diff, intersection, filename="ges-change.tif", scale=1000)
+        download_gee_image(GES_first, intersection, filename="ges-first.tif", scale=1000)
+        download_gee_image(GES_last, intersection, filename="ges-last.tif", scale=1000)
 
     except MemoryError as e:
         st.error(f"Memory Error: {str(e)}")
