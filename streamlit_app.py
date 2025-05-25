@@ -214,6 +214,8 @@ if st.button("Run Analysis"):
         
         # Display the map
         m = geemap.Map(draw_control=False)
+        # Disable draw control
+        m.reset(clear_draw_control=True)
         m.centerObject(region, 6)
         m.addLayer(GES_first, ges_params1, "GES Start Year", shown=False)
         m.addLayer(GES_last, ges_params1, "GES End Year", shown=False)
