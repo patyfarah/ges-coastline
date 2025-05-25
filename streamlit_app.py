@@ -204,10 +204,6 @@ with st.sidebar:
     start_year = st.number_input("Start Year", min_value=2000, max_value=2030, value=2002)
     end_year = st.number_input("End Year", min_value=2000, max_value=2030, value=2022)
     buffer_km = st.slider("Coast Buffer (km)", 1, 10, 5)
-    if st.button("Download"):
-        m.add_ee_layer(GES_diff, {}, 'GES')
-        m.save('map.html')
-
 
 if st.button("Run Analysis"):
     try:
@@ -226,8 +222,10 @@ if st.button("Run Analysis"):
         m.addLayer(filtered.style(**{"color": "black", "fillColor": "#00000000", "width": 2}), {}, "Border")
         m.add_legend(title="GES Classification", legend_dict=dict(zip(ges_params1['labels'], ges_params1['palette'])))
         m.to_streamlit(height=600)
-        
-        
+
+        m.add_ee_layer(GES_diff, {}, 'GES')
+        m.save('download.html')
+                
         process_and_display(GES_diff)
 
     except MemoryError as e:
