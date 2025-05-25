@@ -239,6 +239,9 @@ with st.sidebar:
     start_year = st.number_input("Start Year", min_value=2000, max_value=2030, value=2002)
     end_year = st.number_input("End Year", min_value=2000, max_value=2030, value=2022)
     buffer_km = st.slider("Coast Buffer (km)", 1, 10, 5)
+    download_gee_image(GES_diff, intersection, filename="ges-change.tif", scale=1000)
+    download_gee_image(GES_first, intersection, filename="ges-first.tif", scale=1000)
+    download_gee_image(GES_last, intersection, filename="ges-last.tif", scale=1000)
 
 if st.button("Run Analysis"):
     try:
@@ -260,9 +263,6 @@ if st.button("Run Analysis"):
                     
         process_and_display(GES_diff)
 
-        download_gee_image(GES_diff, intersection, filename="ges-change.tif", scale=1000)
-        download_gee_image(GES_first, intersection, filename="ges-first.tif", scale=1000)
-        download_gee_image(GES_last, intersection, filename="ges-last.tif", scale=1000)
 
     except MemoryError as e:
         st.error(f"Memory Error: {str(e)}")
