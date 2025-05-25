@@ -194,7 +194,7 @@ def download_ee_image(image, description='image',region=intersection, scale=1000
             'scale': scale,
             'crs': crs,
             'fileFormat': 'GeoTIFF',
-            region=intersection
+            'region': intersection
         })
         st.info("Downloading image...")
         response = requests.get(url)
