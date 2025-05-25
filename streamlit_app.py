@@ -201,7 +201,11 @@ def download_ee_image(image,intersection, description='image', scale=1000, crs='
         if not any(stats.values()):
             st.warning("The image has no data in the selected region.")
             return
-
+    
+        # Simplify geometry
+        region = intersection.simplify(100).bounds()
+        # Select few bands if multiband
+        image = image.select(['GES'])
         # Download the image
         url = image.getDownloadURL({
             'scale': scale,
