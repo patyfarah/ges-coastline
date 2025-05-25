@@ -36,13 +36,12 @@ ges_params1 = {
 }
 
 # Define the class labels and corresponding ranges for GES_diff
-# Changed -float('inf') to a practical lower bound, e.g., -100
 ges_params = {
     'Very Severe': (-100, -25),
     'Severe': (-25, -5),
     'No Change': (-5, 5),
     'Good Envionmental': (5, 25),
-    'Excellent improvement': (25, float('inf')) # float('inf') is generally handled better as an upper bound
+    'Excellent improvement': (25, float('inf'))
 }
 
 # Define the palette separately so it's accessible for the bar chart color
@@ -51,6 +50,7 @@ ges_palette = ['#a50026', '#f88d52', '#ffffbf', '#86cb66', '#006837']
 NDVI_PRODUCTS = {"MOD13A1": ee.ImageCollection("MODIS/061/MOD13A1")}
 LST_PRODUCTS = {"MOD11A1": ee.ImageCollection("MODIS/061/MOD11A1")}
 
+# Functions for NDVI and LST masking
 def mask_ndvi(image):
     qa = image.select('SummaryQA')
     mask = qa.lte(1)
@@ -64,33 +64,40 @@ def mask_lst(image):
     lst = lst.updateMask(lst.gte(-20).And(lst.lte(50)))
     return lst.copyProperties(image, image.propertyNames())
 
+# Function to handle Earth Engine image collection fetching
 def get_image_collection(collection_dict, product, region, start_date, end_date, mask_function=None):
     collection = collection_dict[product].filterBounds(region).filterDate(start_date, end_date)
     if mask_function:
         collection = collection.map(mask_function)
     return collection
 
+# Function to get intersection and region geometry
 def return_intersect(country, buffer_dist_km):
     countries = ee.FeatureCollection("USDOS/LSIB_SIMPLE/2017")
     filtered = countries.filter(ee.Filter.eq('country_na', country))
     region = filtered.geometry()
     buffered = region.buffer(-buffer_dist_km * 1000)
     outer_band = region.difference(buffered)
-    asset_id ='projects/ee-project-457404/assets/coastlines'    
+    asset_id = 'projects/ee-project-457404/assets/coastlines'    
     ee_fc = ee.FeatureCollection(asset_id).filterBounds(region)
     coastline = ee_fc.geometry()
     coastline_buffer = coastline.buffer(buffer_dist_km * 1000)
     intersection = outer_band.intersection(coastline_buffer)
-    del countries, buffered, outer_band, asset_id,ee_fc,coastline, coastline_buffer
+    
+    # Release unnecessary variables
+    del countries, buffered, outer_band, asset_id, ee_fc, coastline, coastline_buffer
     gc.collect()
+    
     return intersection, region, filtered
 
+# Function to compute GES for a given year
 def get_ges(intersection, year):
     start_date = f"{year}-01-01"
     end_date = f"{year}-12-31"
     ndvi = get_image_collection(NDVI_PRODUCTS, "MOD13A1", intersection, start_date, end_date, mask_ndvi)
     lst = get_image_collection(LST_PRODUCTS, "MOD11A1", intersection, start_date, end_date, mask_lst)
 
+    # Reduce collections to median and normalize
     ndvi_median = ndvi.median().select('NDVI').multiply(0.0001)
     lst_temp = lst.median()
 
@@ -105,32 +112,33 @@ def get_ges(intersection, year):
     lst_min = ee.Number(lst_minmax.get('LST_Day_1km_min'))
     lst_max = ee.Number(lst_minmax.get('LST_Day_1km_max'))
 
+    # Normalize the NDVI and LST
     ndvi_normal = (ndvi_mean.subtract(ndvi_min).divide(ndvi_max.subtract(ndvi_min))).multiply(100)
     lst_normal = (lst_mean.subtract(lst_min).divide(lst_max.subtract(lst_min))).multiply(100).subtract(100)
 
+    # Calculate GES
     GES = ndvi_normal.multiply(0.5).add(lst_normal.multiply(0.5)).rename('GES')
-    del ndvi,lst,ndvi_mean,lst_mean,ndvi_minmax,lst_minmax,ndvi_min,ndvi_max,lst_min,lst_max,ndvi_normal, lst_normal
+    
+    # Release unnecessary variables
+    del ndvi, lst, ndvi_mean, lst_mean, ndvi_minmax, lst_minmax, ndvi_min, ndvi_max, lst_min, lst_max, ndvi_normal, lst_normal
     gc.collect()
+    
     return GES
 
 # Function to process and display the GES classification
 def process_and_display(image):
     GES_first = image
     
-   # Calculate the number of pixels in each class
+    # Calculate the number of pixels in each class
     class_counts = {}
     for class_name, (lower, upper) in ges_params.items():
-        # Create a mask for the current class range
-        # Ensure the comparison handles the upper bound correctly (inclusive/exclusive based on definition)
         if upper == float('inf'):
             class_mask = GES_first.gte(lower)
         else:
             class_mask = GES_first.gte(lower).And(GES_first.lt(upper))
-    
-        # Count the pixels within the mask
+        
         count = GES_first.updateMask(class_mask).reduceRegion(
             reducer=ee.Reducer.count(),
-            #geometry=region, # Consider adding the region if needed - make sure 'region' is accessible in this scope
             scale=1000,
             maxPixels=1e13
         ).get('GES').getInfo()
@@ -148,7 +156,7 @@ def process_and_display(image):
 
     # Create the bar chart
     fig, ax = plt.subplots(figsize=(10, 6))
-    ax.bar(class_names, counts, color=colors)  # Use the mapped colors
+    ax.bar(class_names, counts, color=colors)
 
     # Customize the chart
     ax.set_title('GES Change Classification')
@@ -162,7 +170,7 @@ def process_and_display(image):
 # --- Streamlit UI --- #
 st.title("🌍 Good Environmental Status (GES) Mapping Tool")
 
-# Main content (not in sidebar)
+# Main content
 st.markdown("### GES Analysis Results")
 st.markdown("The map below shows the Good Environmental Status (GES) for the selected country.")
 
@@ -184,18 +192,14 @@ if st.button("Run Analysis"):
     GES_last = get_ges(intersection, end_year)
     GES_diff = GES_last.subtract(GES_first)
     
-    
-    # Create and display the map below the title 
-
+    # Create and display the map
     m = geemap.Map()
     m.centerObject(region, 6)
-    m.addLayer(GES_first, ges_params1, "GES Start Year",shown=False)
-    m.addLayer(GES_last, ges_params1, "GES End Year",shown=False)
+    m.addLayer(GES_first, ges_params1, "GES Start Year", shown=False)
+    m.addLayer(GES_last, ges_params1, "GES End Year", shown=False)
     m.addLayer(GES_diff, ges_params1, "GES Change")
     m.addLayer(filtered.style(**{"color": "black", "fillColor": "#00000000", "width": 2}), {}, "Border")
     m.add_legend(title="GES Classification", legend_dict=dict(zip(ges_params1['labels'], ges_params1['palette'])))
-    # Access the underlying Folium map object
     m.to_streamlit(height=600)
+    
     process_and_display(GES_diff)
-    
-    
