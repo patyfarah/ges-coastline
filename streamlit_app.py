@@ -13,6 +13,7 @@ import numpy as np
 import time
 import requests
 import tempfile
+import os
 
 #--------------------------------------------------------
 # Initialization
@@ -188,57 +189,37 @@ def process_and_display(image):
     except Exception as e:
         st.error(f"An unexpected error occurred: {str(e)}")
 
-def download_ee_image(image,intersection, description='image', scale=1000, crs='EPSG:4326'):
+
+def download_gee_image(image: ee.Image, region: ee.Geometry, filename: str = 'gee_image.tif', scale: int = 30):
+    """
+    Exports an Earth Engine image to a GeoTIFF and provides a Streamlit download button.
+
+    Parameters:
+    - image: ee.Image object to export.
+    - region: ee.Geometry defining the export region.
+    - filename: Name of the output file (TIF format).
+    - scale: Resolution in meters per pixel.
+    """
     try:
-        # Check for valid data in the region
-        stats = image.reduceRegion(
-            reducer=ee.Reducer.count(),
-            geometry=intersection,
+        # Export the image to local GeoTIFF file
+        geemap.ee_export_image(
+            image=image,
+            filename=filename,
             scale=scale,
-            maxPixels=1e13
-        ).getInfo()
-
-        if not any(stats.values()):
-            st.warning("The image has no data in the selected region.")
-            return
-    
-        # Simplify geometry
-        region = intersection.simplify(100).bounds()
-        # Select few bands if multiband
-        image = image.select(['GES'])
-        # Download the image
-        url = image.getDownloadURL({
-            'scale': scale,
-            'crs': crs,
-            'fileFormat': 'GeoTIFF',
-            'region': region,
-            'formatOptions': {
-                'cloudOptimized': True,     # Enables COG structure (when supported)
-                'compressed': True          # Helps reduce size
-            }
-        })
-
-        st.info("Downloading image...")
-        response = requests.get(url)
-        response.raise_for_status()
-
-        # File size check (bytes)
-        file_size = len(response.content)
-        if file_size < 10_000:  # ~10 KB (tweak threshold if needed)
-            st.error(f"The downloaded file seems too small ({file_size} bytes). It may be corrupted or empty.")
-            return
-
-        # If all good, present the download
-        st.success(f"Download ready ({file_size / 1024:.2f} KB)")
-        st.download_button(
-            label="Download GeoTIFF",
-            data=response.content,
-            file_name=f"{description}.tif",
-            mime="image/tiff"
+            region=region,
         )
-    except Exception as e:
-        st.error(f"Error downloading image: {e}")
+        st.success("Image exported successfully!")
 
+        # Offer the file for download
+        with open(filename, "rb") as f:
+            st.download_button(
+                label="Download GeoTIFF",
+                data=f,
+                file_name=filename,
+                mime="image/tiff"
+            )
+    except Exception as e:
+        st.error(f"Image export failed: {e}")
 
  
         
@@ -281,7 +262,7 @@ if st.button("Run Analysis"):
                     
         process_and_display(GES_diff)
 
-        download_ee_image(GES_diff, intersection,description='GES Change' )
+        download_gee_image(image=GES_diff, region=intersection, filename="ges-image.tif", scale=30)
 
     except MemoryError as e:
         st.error(f"Memory Error: {str(e)}")
