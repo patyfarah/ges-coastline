@@ -221,6 +221,8 @@ if st.button("Run Analysis"):
         m.addLayer(filtered.style(**{"color": "black", "fillColor": "#00000000", "width": 2}), {}, "Border")
         
         m.add_legend(title="GES Classification", legend_dict=dict(zip(ges_params1['labels'], ges_params1['palette'])))
+        # Manually remove the Draw control (disable drawing)
+        m.folium_map.remove_child(m.folium_map._draw)
         m.to_streamlit(height=600)
         
         process_and_display(GES_diff)
