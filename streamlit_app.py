@@ -213,7 +213,10 @@ if st.button("Run Analysis"):
         GES_diff = GES_last.subtract(GES_first)
         
         # Display the map
-        m = geemap.Map(draw_ctrl=False)
+        m = geemap.Map()
+        m.setControlVisibility({
+          drawingToolsControl:false
+        })
         m.centerObject(region, 6)
         m.addLayer(GES_first, ges_params1, "GES Start Year", shown=False)
         m.addLayer(GES_last, ges_params1, "GES End Year", shown=False)
