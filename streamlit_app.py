@@ -188,32 +188,39 @@ def process_and_display(image):
         st.error(f"An unexpected error occurred: {str(e)}")
 
 
-def export_and_download(image, filename, label, region, scale=1000):
+def download_gee_image(image: ee.Image, region: ee.Geometry, filename: str = 'gee_image.tif', scale: int = 1000):
+    """
+    Exports an Earth Engine image to a GeoTIFF and provides a Streamlit download button.
+
+    Parameters:
+    - image: ee.Image object to export.
+    - region: ee.Geometry defining the export region.
+    - filename: Name of the output file (TIF format).
+    - scale: Resolution in meters per pixel.
+    """
     try:
+        # Export the image to local GeoTIFF file
         geemap.ee_export_image(
             image,
             filename=filename,
             scale=scale,
             region=region,
         )
+        st.success("Image exported successfully!")
+
+        # Offer the file for download
         with open(filename, "rb") as f:
             st.download_button(
-                label=label,
+                label="Download GeoTIFF",
                 data=f,
                 file_name=filename,
-                mime="image/tiff",
-                key=f"download_{filename}"  # ensures uniqueness
+                mime="image/tiff"
             )
     except Exception as e:
-        st.error(f"Failed to export {label}: {e}")
+        st.error(f"Image export failed: {e}")
 
-    # Export all images with clear labels
-    st.subheader("⬇️ Download GES GeoTIFFs")
-    export_and_download(GES_diff, "ges-diff.tif", "Download GES Change (Diff)", intersection)
-    export_and_download(GES_first, "ges-start.tif", "Download GES Start Year", intersection)
-    export_and_download(GES_last, "ges-end.tif", "Download GES End Year", intersection)
 
-       
+        
 
 # --- Streamlit UI --- #
 st.title("🌍 Good Environmental Status (GES) Mapping Tool")
@@ -254,7 +261,7 @@ if st.button("Run Analysis"):
                     
         process_and_display(GES_diff)
 
-               # Export and provide download buttons for all three images
+        # Export and provide download buttons for all three images
         for img, label, fname in zip(
             [GES_diff, GES_first, GES_last],
             ["Download GES Change", "Download GES Start Year", "Download GES End Year"],
@@ -277,7 +284,6 @@ if st.button("Run Analysis"):
                     )
             except Exception as e:
                 st.error(f"Failed to export {label}: {e}")
-
 
 
 
