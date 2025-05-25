@@ -206,8 +206,8 @@ def export_image_streamlit(image, description='GES_image', scale=1000, crs='EPSG
             file_name=f"{description}.tif",
             mime="image/tiff"
         )
-    except Exception as e:
-        st.error(f"Error downloading image: {e}")
+        except Exception as e:
+            st.error(f"Error downloading image: {e}")
 
    
         
