@@ -207,11 +207,6 @@ def export_image_streamlit(image, description='GES_image', scale=1000, crs='EPSG
         response = requests.get(url)
         response.raise_for_status()
 
-        # Save to temp file
-        tmp_file = tempfile.NamedTemporaryFile(delete=False, suffix='.tif')
-        tmp_file.write(response.content)
-        tmp_file.flush()
-
         st.success(f"File ready for download: {description}.tif")
         st.download_button(
             label="Download GeoTIFF",
