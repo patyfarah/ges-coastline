@@ -211,7 +211,7 @@ def download_ee_image(image,intersection, description='image', scale=1000, crs='
             'scale': scale,
             'crs': crs,
             'fileFormat': 'GeoTIFF',
-            'region': intersection
+            'region': region 
         })
 
         st.info("Downloading image...")
