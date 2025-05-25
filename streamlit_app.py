@@ -186,6 +186,19 @@ def process_and_display(image):
     except Exception as e:
         st.error(f"An unexpected error occurred: {str(e)}")
 
+
+def download_ges_diff_geemap():
+    filename = "GES_diff.tif"
+    # Export the image to local disk (replace `intersection` with your geometry)
+    geemap.ee_export_image(
+        GES_diff,
+        filename=filename,
+        scale=1000,
+        region=intersection.geometry().getInfo()['coordinates'],
+        file_per_band=False
+    )
+    return filename
+
 # --- Streamlit UI --- #
 st.title("🌍 Good Environmental Status (GES) Mapping Tool")
 
@@ -203,6 +216,16 @@ with st.sidebar:
     start_year = st.number_input("Start Year", min_value=2000, max_value=2030, value=2002)
     end_year = st.number_input("End Year", min_value=2000, max_value=2030, value=2022)
     buffer_km = st.slider("Coast Buffer (km)", 1, 10, 5)
+    if st.button("Download GES_diff GeoTIFF"):
+    with st.spinner("Exporting image..."):
+        file_path = download_ges_diff_geemap()
+        with open(file_path, "rb") as f:
+            st.download_button(
+                label="Download GES_diff GeoTIFF",
+                data=f,
+                file_name=file_path,
+                mime="image/tiff"
+            )
 
 if st.button("Run Analysis"):
     try:
