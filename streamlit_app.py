@@ -1,168 +1,295 @@
-# -------------------------------------------------------
+#-------------------------------------------------------
 # Libraries
-# -------------------------------------------------------
+#-------------------------------------------------------
 import streamlit as st
+import geopandas as gpd
 import ee
 import geemap.foliumap as geemap
+import folium
 from google.oauth2 import service_account
-import matplotlib.pyplot as plt
-import os
 import gc
+import matplotlib.pyplot as plt
+import numpy as np
+import time
+import os
 
-# -------------------------------------------------------
-# Earth Engine Initialization
-# -------------------------------------------------------
+#--------------------------------------------------------
+# Initialization
+#--------------------------------------------------------
+# Load service account info from Streamlit secrets
+service_account_info = dict(st.secrets["earthengine"])
+
+SCOPES = ['https://www.googleapis.com/auth/earthengine']
+
+# Create Google credentials object
 credentials = service_account.Credentials.from_service_account_info(
-    dict(st.secrets["earthengine"]),
-    scopes=['https://www.googleapis.com/auth/earthengine']
-)
+    service_account_info, scopes=SCOPES)
+
+# Initialize Earth Engine
 ee.Initialize(credentials)
 
-# -------------------------------------------------------
-# Constants
-# -------------------------------------------------------
-NDVI_PRODUCTS = {"MOD13A1": ee.ImageCollection("MODIS/061/MOD13A1")}
-LST_PRODUCTS = {"MOD11A1": ee.ImageCollection("MODIS/061/MOD11A1")}
+# Visualization Params
+ges_params1 = {
+    'bands': ['GES'],
+    'palette': ['#a50026', '#f88d52', '#ffffbf', '#86cb66', '#006837'],
+    'min': -50,
+    'max': 50,
+    'labels': ['Very Severe', 'Severe', 'No Change', 'Good Environmental', 'Excellent Improvement']
+}
 
-GES_PALETTE = ['#a50026', '#f88d52', '#ffffbf', '#86cb66', '#006837']
-GES_CLASSES = {
+# Define the class labels and corresponding ranges for GES_diff
+ges_params = {
     'Very Severe': (-100, -25),
     'Severe': (-25, -5),
     'No Change': (-5, 5),
-    'Good Environmental': (5, 25),
-    'Excellent Improvement': (25, float('inf'))
-}
-VIS_PARAMS = {
-    'bands': ['GES'],
-    'palette': GES_PALETTE,
-    'min': -50,
-    'max': 50,
-    'labels': list(GES_CLASSES.keys())
+    'Good Envionmental': (5, 25),
+    'Excellent improvement': (25, float('inf'))
 }
 
-# -------------------------------------------------------
-# Utility Functions
-# -------------------------------------------------------
+# Define the palette separately so it's accessible for the bar chart color
+ges_palette = ['#a50026', '#f88d52', '#ffffbf', '#86cb66', '#006837']
+
+NDVI_PRODUCTS = {"MOD13A1": ee.ImageCollection("MODIS/061/MOD13A1")}
+LST_PRODUCTS = {"MOD11A1": ee.ImageCollection("MODIS/061/MOD11A1")}
+
+# Functions for NDVI and LST masking
 def mask_ndvi(image):
-    return image.updateMask(image.select('SummaryQA').lte(1))
+    qa = image.select('SummaryQA')
+    mask = qa.lte(1)
+    return image.updateMask(mask)
 
 def mask_lst(image):
     qc = image.select('QC_Day')
-    mask = qc.bitwiseAnd(3).lte(1)
+    quality_mask = qc.bitwiseAnd(3).lte(1)
     lst = image.select('LST_Day_1km').multiply(0.02).subtract(273.15)
-    return lst.updateMask(mask).updateMask(lst.gte(-20).And(lst.lte(50)))
+    lst = lst.updateMask(quality_mask)
+    lst = lst.updateMask(lst.gte(-20).And(lst.lte(50)))
+    return lst.copyProperties(image, image.propertyNames())
 
-def get_image_collection(products, key, region, start, end, mask_fn=None):
-    col = products[key].filterBounds(region).filterDate(start, end)
-    return col.map(mask_fn) if mask_fn else col
+# Function to handle Earth Engine image collection fetching
+def get_image_collection(collection_dict, product, region, start_date, end_date, mask_function=None):
+    collection = collection_dict[product].filterBounds(region).filterDate(start_date, end_date)
+    if mask_function:
+        collection = collection.map(mask_function)
+    return collection
 
-def return_intersect(country, buffer_km):
+# Function to get intersection and region geometry
+def return_intersect(country, buffer_dist_km):
     countries = ee.FeatureCollection("USDOS/LSIB_SIMPLE/2017")
-    region = countries.filter(ee.Filter.eq('country_na', country)).geometry()
-    inner = region.buffer(-buffer_km * 1000)
-    outer = region.difference(inner)
-    coast = ee.FeatureCollection('projects/ee-project-457404/assets/coastlines') \
-        .filterBounds(region).geometry().buffer(buffer_km * 1000)
-    return outer.intersection(coast), region
+    filtered = countries.filter(ee.Filter.eq('country_na', country))
+    region = filtered.geometry()
+    buffered = region.buffer(-buffer_dist_km * 1000)
+    outer_band = region.difference(buffered)
+    asset_id = 'projects/ee-project-457404/assets/coastlines'    
+    ee_fc = ee.FeatureCollection(asset_id).filterBounds(region)
+    coastline = ee_fc.geometry()
+    coastline_buffer = coastline.buffer(buffer_dist_km * 1000)
+    intersection = outer_band.intersection(coastline_buffer)
+    
+    # Release unnecessary variables
+    del countries, buffered, outer_band, asset_id, ee_fc, coastline, coastline_buffer
+    gc.collect()
+    
+    return intersection, region, filtered
 
-def get_ges(region, year):
-    start, end = f"{year}-01-01", f"{year}-12-31"
-    ndvi = get_image_collection(NDVI_PRODUCTS, "MOD13A1", region, start, end, mask_ndvi).median().select('NDVI').multiply(0.0001)
-    lst = get_image_collection(LST_PRODUCTS, "MOD11A1", region, start, end, mask_lst).median()
+# Function to compute GES for a given year
+def get_ges(intersection, year):
+    try:
+        start_date = f"{year}-01-01"
+        end_date = f"{year}-12-31"
+        ndvi = get_image_collection(NDVI_PRODUCTS, "MOD13A1", intersection, start_date, end_date, mask_ndvi)
+        lst = get_image_collection(LST_PRODUCTS, "MOD11A1", intersection, start_date, end_date, mask_lst)
 
-    ndvi = ndvi.clip(region)
-    lst = lst.unmask().focal_mean(radius=1, units='pixels', iterations=1).clip(region)
+        # Reduce collections to median and normalize
+        ndvi_median = ndvi.median().select('NDVI').multiply(0.0001)
+        lst_temp = lst.median()
 
-    ndvi_stats = ndvi.reduceRegion(ee.Reducer.minMax(), region, 1000, maxPixels=1e13)
-    lst_stats = lst.reduceRegion(ee.Reducer.minMax(), region, 1000, maxPixels=1e13)
+        ndvi_mean = ndvi_median.clip(intersection)
+        lst_mean = lst_temp.unmask().focal_mean(radius=1, units='pixels', iterations=1).clip(intersection)
 
-    ndvi_norm = ndvi.subtract(ndvi_stats.get('NDVI_min')).divide(
-        ee.Number(ndvi_stats.get('NDVI_max')).subtract(ndvi_stats.get('NDVI_min'))).multiply(100)
-    lst_norm = lst.subtract(lst_stats.get('LST_Day_1km_min')).divide(
-        ee.Number(lst_stats.get('LST_Day_1km_max')).subtract(lst_stats.get('LST_Day_1km_min'))).multiply(100).subtract(100)
+        ndvi_minmax = ndvi_mean.reduceRegion(ee.Reducer.minMax(), intersection, 1000, maxPixels=1e13)
+        lst_minmax = lst_mean.reduceRegion(ee.Reducer.minMax(), intersection, 1000, maxPixels=1e13)
 
-    return ndvi_norm.multiply(0.5).add(lst_norm.multiply(0.5)).rename('GES')
+        ndvi_min = ee.Number(ndvi_minmax.get('NDVI_min'))
+        ndvi_max = ee.Number(ndvi_minmax.get('NDVI_max'))
+        lst_min = ee.Number(lst_minmax.get('LST_Day_1km_min'))
+        lst_max = ee.Number(lst_minmax.get('LST_Day_1km_max'))
 
-def plot_ges_bar(image):
-    counts = {}
-    for label, (low, high) in GES_CLASSES.items():
-        mask = image.gte(low) if high == float('inf') else image.gte(low).And(image.lt(high))
-        count = image.updateMask(mask).reduceRegion(ee.Reducer.count(), scale=1000, maxPixels=1e13).get('GES').getInfo()
-        counts[label] = count
+        # Normalize the NDVI and LST
+        ndvi_normal = (ndvi_mean.subtract(ndvi_min).divide(ndvi_max.subtract(ndvi_min))).multiply(100)
+        lst_normal = (lst_mean.subtract(lst_min).divide(lst_max.subtract(lst_min))).multiply(100).subtract(100)
 
-    fig, ax = plt.subplots(figsize=(10, 5))
-    ax.bar(counts.keys(), counts.values(), color=GES_PALETTE)
-    ax.set_title("GES Change Classification")
-    ax.set_xlabel("Class")
-    ax.set_ylabel("Pixel Count")
-    st.pyplot(fig)
+        # Calculate GES
+        GES = ndvi_normal.multiply(0.5).add(lst_normal.multiply(0.5)).rename('GES')
+        
+        # Release unnecessary variables
+        del ndvi, lst, ndvi_mean, lst_mean, ndvi_minmax, lst_minmax, ndvi_min, ndvi_max, lst_min, lst_max, ndvi_normal, lst_normal
+        gc.collect()
+        
+        return GES
 
-def export_if_needed(image, region, filename, key):
-    if key not in st.session_state.get("exported_files", {}) or not os.path.exists(filename):
-        geemap.ee_export_image(image, filename=filename, region=region, scale=1000)
-        st.session_state["exported_files"][key] = filename
+    except ee.EEException as e:
+        error_message = str(e)
+        if "out of memory" in error_message.lower() or "memory" in error_message.lower():
+            raise MemoryError("The operation exceeded the memory limit. Please try selecting a smaller area or a shorter time range.")
+        elif "timeout" in error_message.lower():
+            raise TimeoutError("The operation timed out. Please try again with a smaller area or shorter time range.")
+        else:
+            raise
 
-# -------------------------------------------------------
-# Streamlit UI
-# -------------------------------------------------------
-st.title("🌍 GES Mapping Tool")
+# Function to process and display the GES classification
+def process_and_display(image):
+    try:
+        GES_first = image
+        
+        # Calculate the number of pixels in each class
+        class_counts = {}
+        for class_name, (lower, upper) in ges_params.items():
+            if upper == float('inf'):
+                class_mask = GES_first.gte(lower)
+            else:
+                class_mask = GES_first.gte(lower).And(GES_first.lt(upper))
+            
+            count = GES_first.updateMask(class_mask).reduceRegion(
+                reducer=ee.Reducer.count(),
+                scale=1000,
+                maxPixels=1e13
+            ).get('GES').getInfo()
+            class_counts[class_name] = count
+        
+        # Extract class names and counts for plotting
+        class_names = list(class_counts.keys())
+        counts = list(class_counts.values())
+        
+        # Map class names to colors for the bar chart
+        colors = [ges_palette[list(ges_params.keys()).index(name)] for name in class_names]
+
+        # Streamlit App - Plotting the Bar Chart
+        st.title('GES Change Classification')
+
+        # Create the bar chart
+        fig, ax = plt.subplots(figsize=(10, 6))
+        ax.bar(class_names, counts, color=colors)
+
+        # Customize the chart
+        ax.set_title('GES Change Classification')
+        ax.set_xlabel('Classification')
+        ax.set_ylabel('Pixel Count')
+        ax.grid(axis='y')  # Add horizontal grid lines
+
+        # Display the chart in Streamlit
+        st.pyplot(fig)
+
+    except MemoryError as e:
+        st.error(f"Error: {str(e)}")
+    except TimeoutError as e:
+        st.error(f"Error: {str(e)}")
+    except Exception as e:
+        st.error(f"An unexpected error occurred: {str(e)}")
+
+
+def download_gee_image(image: ee.Image, region: ee.Geometry, filename: str = 'gee_image.tif', scale: int = 1000):
+    """
+    Exports an Earth Engine image to a GeoTIFF and provides a Streamlit download button.
+
+    Parameters:
+    - image: ee.Image object to export.
+    - region: ee.Geometry defining the export region.
+    - filename: Name of the output file (TIF format).
+    - scale: Resolution in meters per pixel.
+    """
+    try:
+        # Export the image to local GeoTIFF file
+        geemap.ee_export_image(
+            image,
+            filename=filename,
+            scale=scale,
+            region=region,
+        )
+        st.success("Image exported successfully!")
+
+        # Offer the file for download
+        with open(filename, "rb") as f:
+            st.download_button(
+                label="Download GeoTIFF",
+                data=f,
+                file_name=filename,
+                mime="image/tiff"
+            )
+    except Exception as e:
+        st.error(f"Image export failed: {e}")
+
+
+        
+
+# --- Streamlit UI --- #
+st.title("🌍 Good Environmental Status (GES) Mapping Tool")
+
+# Main content
+st.markdown("### GES Analysis Results")
+st.markdown("The map below shows the Good Environmental Status (GES) for the selected country.")
+
+# Sidebar for configuration
 with st.sidebar:
     st.header("Configuration")
-    country = st.selectbox("Country", ["Morocco", "Algeria", "Tunisia", "Libya", "Egypt", "Syria", "Lebanon", "Yemen", "Mauritania"], index=6)
-    start_year = st.number_input("Start Year", 2000, 2030, 2002)
-    end_year = st.number_input("End Year", 2000, 2030, 2022)
+    country = st.selectbox("Select Country", ["Morocco", "Algeria", "Tunisia", "Libya", "Egypt",
+                                              "Syria", "Lebanon", "Yemen", "Mauritania"],
+                            index=6
+                          )
+    start_year = st.number_input("Start Year", min_value=2000, max_value=2030, value=2002)
+    end_year = st.number_input("End Year", min_value=2000, max_value=2030, value=2022)
     buffer_km = st.slider("Coast Buffer (km)", 1, 10, 5)
 
+
 if st.button("Run Analysis"):
-    st.info("Running analysis, please wait...")
     try:
-        inter, region = return_intersect(country, buffer_km)
-        GES_start = get_ges(inter, start_year)
-        GES_end = get_ges(inter, end_year)
-        GES_diff = GES_end.subtract(GES_start)
+        st.info("Processing... Please wait a few moments.")
+        intersection, region, filtered = return_intersect(country, buffer_km)
+        GES_first = get_ges(intersection, start_year)
+        GES_last = get_ges(intersection, end_year)
+        GES_diff = GES_last.subtract(GES_first)
+        
+        # Display the map
+        m = geemap.Map()
+        m.centerObject(region, 6)
+        m.addLayer(GES_first, ges_params1, "GES Start Year", shown=False)
+        m.addLayer(GES_last, ges_params1, "GES End Year", shown=False)
+        m.addLayer(GES_diff, ges_params1, "GES Change")
+        m.addLayer(filtered.style(**{"color": "black", "fillColor": "#00000000", "width": 2}), {}, "Border")
+        m.add_legend(title="GES Classification", legend_dict=dict(zip(ges_params1['labels'], ges_params1['palette'])))
+        m.to_streamlit(height=600)
+                    
+        process_and_display(GES_diff)
 
-        st.session_state.update({
-            "analysis_done": True,
-            "region": region,
-            "intersection": inter,
-            "GES_first": GES_start,
-            "GES_last": GES_end,
-            "GES_diff": GES_diff,
-            "exported_files": {}
-        })
-
-        for key, img, fname in zip(
-            ["GES_diff", "GES_first", "GES_last"],
-            [GES_diff, GES_start, GES_end],
+        # Export and provide download buttons for all three images
+        for img, label, fname in zip(
+            [GES_diff, GES_first, GES_last],
+            ["Download GES Change", "Download GES Start Year", "Download GES End Year"],
             ["ges-change.tif", "ges-first.tif", "ges-last.tif"]
         ):
-            export_if_needed(img, inter, fname, key)
+            try:
+                geemap.ee_export_image(
+                    img,
+                    filename=fname,
+                    scale=1000,
+                    region=intersection,
+                )
+                with open(fname, "rb") as f:
+                    st.download_button(
+                        label=label,
+                        data=f,
+                        file_name=fname,
+                        mime="image/tiff",
+                        key=fname  # unique key for each button
+                    )
+            except Exception as e:
+                st.error(f"Failed to export {label}: {e}")
 
+
+
+    except MemoryError as e:
+        st.error(f"Memory Error: {str(e)}")
+    except TimeoutError as e:
+        st.error(f"Timeout Error: {str(e)}")
     except Exception as e:
-        st.error(f"Error: {e}")
-
-# -------------------------------------------------------
-# Output Display
-# -------------------------------------------------------
-if st.session_state.get("analysis_done"):
-    st.subheader("🗺️ GES Map")
-    m = geemap.Map()
-    m.centerObject(st.session_state["region"], 6)
-    m.addLayer(st.session_state["GES_first"], VIS_PARAMS, "GES Start Year", shown=False)
-    m.addLayer(st.session_state["GES_last"], VIS_PARAMS, "GES End Year", shown=False)
-    m.addLayer(st.session_state["GES_diff"], VIS_PARAMS, "GES Change")
-    m.add_legend(title="GES Classification", legend_dict=dict(zip(VIS_PARAMS['labels'], VIS_PARAMS['palette'])))
-    m.to_streamlit(height=600)
-
-    st.subheader("📊 GES Classification Chart")
-    plot_ges_bar(st.session_state["GES_diff"])
-
-    st.subheader("📥 Downloads")
-    for key, label in zip(
-        ["GES_diff", "GES_first", "GES_last"],
-        ["Download GES Change", "Download GES Start Year", "Download GES End Year"]
-    ):
-        filepath = st.session_state["exported_files"].get(key)
-        if filepath and os.path.exists(filepath):
-            with open(filepath, "rb") as f:
-                st.download_button(label=label, data=f, file_name=filepath, mime="image/tiff", key=f"dl-{key}")
+        st.error(f"An unexpected error occurred: {str(e)}")
