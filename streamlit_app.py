@@ -187,17 +187,24 @@ def process_and_display(image):
     except Exception as e:
         st.error(f"An unexpected error occurred: {str(e)}")
 
+import streamlit as st
+import geemap.foliumap as geemap
+import ee
+
 def download_gee_image(image: ee.Image, region: ee.Geometry, filename: str = 'gee_image.tif', scale: int = 1000):
     """
     Exports an Earth Engine image to a GeoTIFF and provides a Streamlit download button,
-    using session state to prevent session reset issues.
+    using session state and unique keys to avoid session resets and duplicate ID errors.
     """
 
-    # Use session state to track export status
-    if 'image_exported' not in st.session_state:
-        st.session_state.image_exported = False
+    export_key = f"export_button_{filename}"
+    download_key = f"download_button_{filename}"
+    export_flag_key = f"image_exported_{filename}"
 
-    if st.button("Export Image"):
+    if export_flag_key not in st.session_state:
+        st.session_state[export_flag_key] = False
+
+    if st.button("Export Image", key=export_key):
         try:
             geemap.ee_export_image(
                 image,
@@ -205,24 +212,25 @@ def download_gee_image(image: ee.Image, region: ee.Geometry, filename: str = 'ge
                 scale=scale,
                 region=region,
             )
-            st.session_state.image_exported = True
+            st.session_state[export_flag_key] = True
             st.success("Image exported successfully!")
         except Exception as e:
             st.error(f"Image export failed: {e}")
-            st.session_state.image_exported = False
+            st.session_state[export_flag_key] = False
 
-    # Show download button only after export
-    if st.session_state.image_exported:
+    if st.session_state[export_flag_key]:
         try:
             with open(filename, "rb") as f:
                 st.download_button(
                     label="Download GeoTIFF",
                     data=f,
                     file_name=filename,
-                    mime="image/tiff"
+                    mime="image/tiff",
+                    key=download_key
                 )
         except Exception as e:
             st.error(f"Download failed: {e}")
+
 
 
         
