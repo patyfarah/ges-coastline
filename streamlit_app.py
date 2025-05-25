@@ -223,8 +223,8 @@ if st.button("Run Analysis"):
         m.add_legend(title="GES Classification", legend_dict=dict(zip(ges_params1['labels'], ges_params1['palette'])))
         m.to_streamlit(height=600)
 
-        m.add_ee_layer(GES_diff, {}, 'GES')
-        m.save('download.html')
+        m.download_ee_image('GES_tiff', filename='GES.tif', scale=1000, crs='EPSG:3857')
+    
                 
         process_and_display(GES_diff)
 
