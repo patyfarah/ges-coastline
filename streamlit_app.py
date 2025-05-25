@@ -191,10 +191,10 @@ def download_ges_diff_geemap(image):
     filename = "GES_diff.tif"
     # Export the image to local disk (replace `intersection` with your geometry)
     geemap.ee_export_image(
-        image,
+        image=image,
         filename=filename,
         scale=1000,
-        region=intersection.geometry().getInfo()['coordinates'],
+        crs='EPSG:3857',
         file_per_band=False
     )
     return filename
@@ -216,12 +216,12 @@ with st.sidebar:
     start_year = st.number_input("Start Year", min_value=2000, max_value=2030, value=2002)
     end_year = st.number_input("End Year", min_value=2000, max_value=2030, value=2022)
     buffer_km = st.slider("Coast Buffer (km)", 1, 10, 5)
-    if st.button("Download GES_diff GeoTIFF"):
+    if st.button("Download"):
         with st.spinner("Exporting image..."):
             file_path = download_ges_diff_geemap(GES_diff)
             with open(file_path, "rb") as f:
                 st.download_button(
-                    label="Download GES_diff GeoTIFF",
+                    label="Download GeoTIFF",
                     data=f,
                     file_name=file_path,
                     mime="image/tiff"
