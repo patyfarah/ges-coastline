@@ -217,15 +217,15 @@ with st.sidebar:
     end_year = st.number_input("End Year", min_value=2000, max_value=2030, value=2022)
     buffer_km = st.slider("Coast Buffer (km)", 1, 10, 5)
     if st.button("Download GES_diff GeoTIFF"):
-    with st.spinner("Exporting image..."):
-        file_path = download_ges_diff_geemap()
-        with open(file_path, "rb") as f:
-            st.download_button(
-                label="Download GES_diff GeoTIFF",
-                data=f,
-                file_name=file_path,
-                mime="image/tiff"
-            )
+        with st.spinner("Exporting image..."):
+            file_path = download_ges_diff_geemap()
+            with open(file_path, "rb") as f:
+                st.download_button(
+                    label="Download GES_diff GeoTIFF",
+                    data=f,
+                    file_name=file_path,
+                    mime="image/tiff"
+                )
 
 if st.button("Run Analysis"):
     try:
@@ -242,9 +242,7 @@ if st.button("Run Analysis"):
         m.addLayer(GES_last, ges_params1, "GES End Year", shown=False)
         m.addLayer(GES_diff, ges_params1, "GES Change")
         m.addLayer(filtered.style(**{"color": "black", "fillColor": "#00000000", "width": 2}), {}, "Border")
-        
         m.add_legend(title="GES Classification", legend_dict=dict(zip(ges_params1['labels'], ges_params1['palette'])))
-
         m.to_streamlit(height=600)
         
         
