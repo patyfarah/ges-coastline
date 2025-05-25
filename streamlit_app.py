@@ -12,6 +12,7 @@ import gc
 import matplotlib.pyplot as plt
 import numpy as np
 import time
+import zipfile
 
 #--------------------------------------------------------
 # Initialization
@@ -220,6 +221,30 @@ def download_gee_images(images: dict, region: ee.Geometry, scale: int = 1000):
         except Exception as e:
             st.error(f"Export failed for {label}: {e}")
 
+def export_images_to_tiffs(images: dict, region: ee.Geometry, scale: int = 1000):
+    exported_files = []
+    errors = []
+    for label, image in images.items():
+        filename = f"{label}.tif"
+        try:
+            geemap.ee_export_image(
+                image,
+                filename=filename,
+                scale=scale,
+                region=region,
+            )
+            exported_files.append(filename)
+        except Exception as e:
+            errors.append(f"{label}: {e}")
+    return exported_files, errors
+
+def create_zip(zip_filename: str, files: list):
+    with zipfile.ZipFile(zip_filename, 'w') as zipf:
+        for file in files:
+            zipf.write(file)
+    return zip_filename
+
+
 
 # --- Streamlit UI --- #
 st.title("🌍 Good Environmental Status (GES) Mapping Tool")
@@ -261,15 +286,36 @@ if st.button("Run Analysis"):
                 
         process_and_display(GES_diff)
 
-        download_gee_images(
-            images={
-                "GES_diff": GES_diff,
-                "GES_first": GES_first,
-                "GES_last": GES_last
-            },
-            region=intersection,
-            scale=1000
-)
+        # Define your images and region here
+        images_dict = {
+            "GES_diff": GES_diff,
+            "GES_first": GES_first,
+            "GES_last": GES_last
+        }
+        
+        region = intersection
+        scale = 1000
+
+        if st.button("Export and Download All Images as ZIP"):
+            exported_files, errors = export_images_to_tiffs(images_dict, region, scale)
+        
+            if errors:
+                for error in errors:
+                    st.error(f"Export failed: {error}")
+        
+            if exported_files:
+                zip_filename = "GES_images.zip"
+                create_zip(zip_filename, exported_files)
+        
+                with open(zip_filename, "rb") as f:
+                    st.download_button(
+                        label="Download All Images (ZIP)",
+                        data=f,
+                        file_name=zip_filename,
+                        mime="application/zip"
+                    )
+
+
 
 
     except MemoryError as e:
