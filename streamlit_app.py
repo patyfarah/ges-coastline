@@ -11,6 +11,8 @@ import gc
 import matplotlib.pyplot as plt
 import numpy as np
 import time
+import requests
+import tempfile
 
 #--------------------------------------------------------
 # Initialization
@@ -186,6 +188,40 @@ def process_and_display(image):
     except Exception as e:
         st.error(f"An unexpected error occurred: {str(e)}")
 
+def export_image_streamlit(image, description='GES_image', scale=1000, crs='EPSG:3857'):
+    st.info("Generating download link...")
+
+    # Define parameters for getDownloadURL
+    params = {
+        'scale': scale,
+        'crs': crs,
+        'fileFormat': 'GeoTIFF'
+    }
+    try:
+        # Get download URL for the image
+        url = image.getDownloadURL(params)
+
+        st.success("Download link generated. Fetching file...")
+
+        # Download the file content
+        response = requests.get(url)
+        response.raise_for_status()
+
+        # Save to temp file
+        tmp_file = tempfile.NamedTemporaryFile(delete=False, suffix='.tif')
+        tmp_file.write(response.content)
+        tmp_file.flush()
+
+        st.success(f"File ready for download: {description}.tif")
+        st.download_button(
+            label="Download GeoTIFF",
+            data=response.content,
+            file_name=f"{description}.tif",
+            mime="image/tiff"
+        )
+    except Exception as e:
+        st.error(f"Failed to generate download link or fetch file: {e}")
+        
 
 # --- Streamlit UI --- #
 st.title("🌍 Good Environmental Status (GES) Mapping Tool")
@@ -223,9 +259,8 @@ if st.button("Run Analysis"):
         m.add_legend(title="GES Classification", legend_dict=dict(zip(ges_params1['labels'], ges_params1['palette'])))
         m.to_streamlit(height=600)
 
-        m.download_ee_image('GES_tiff', filename='GES.tif', scale=1000, crs='EPSG:3857')
-    
-                
+        export_image_streamlit(GES_diff)
+                    
         process_and_display(GES_diff)
 
     except MemoryError as e:
