@@ -188,7 +188,7 @@ def process_and_display(image):
         st.error(f"An unexpected error occurred: {str(e)}")
 
 
-def download_gee_image(image: image, region: region, filename: str = 'gee_image.tif', scale: int = 1000):
+def download_gee_image(image, region, filename: str = 'gee_image.tif', scale: int = 1000):
     """
     Exports an Earth Engine image to a GeoTIFF and provides a Streamlit download button.
 
@@ -260,7 +260,7 @@ if st.button("Run Analysis"):
                     
         process_and_display(GES_diff)
 
-        download_gee_image(image=GES_diff, region=intersection, filename="ges-image.tif", scale=30)
+        download_gee_image(GES_diff, intersection, filename="ges-image.tif", scale=1000)
 
     except MemoryError as e:
         st.error(f"Memory Error: {str(e)}")
