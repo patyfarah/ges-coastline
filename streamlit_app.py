@@ -128,8 +128,11 @@ def get_ges(intersection, year):
         return GES
 
     except ee.EEException as e:
-        if 'memory limit exceeded' in str(e).lower():
+        error_message = str(e)
+        if "out of memory" in error_message.lower() or "memory" in error_message.lower():
             raise MemoryError("The operation exceeded the memory limit. Please try selecting a smaller area or a shorter time range.")
+        elif "timeout" in error_message.lower():
+            raise TimeoutError("The operation timed out. Please try again with a smaller area or shorter time range.")
         else:
             raise
 
@@ -178,6 +181,10 @@ def process_and_display(image):
 
     except MemoryError as e:
         st.error(f"Error: {str(e)}")
+    except TimeoutError as e:
+        st.error(f"Error: {str(e)}")
+    except Exception as e:
+        st.error(f"An unexpected error occurred: {str(e)}")
 
 # --- Streamlit UI --- #
 st.title("🌍 Good Environmental Status (GES) Mapping Tool")
@@ -198,9 +205,8 @@ with st.sidebar:
     buffer_km = st.slider("Coast Buffer (km)", 1, 10, 5)
 
 if st.button("Run Analysis"):
-    st.info("Processing... Please wait a few moments.")
-    
     try:
+        st.info("Processing... Please wait a few moments.")
         intersection, region, filtered = return_intersect(country, buffer_km)
         GES_first = get_ges(intersection, start_year)
         GES_last = get_ges(intersection, end_year)
@@ -217,6 +223,10 @@ if st.button("Run Analysis"):
         m.to_streamlit(height=600)
         
         process_and_display(GES_diff)
-    
+
     except MemoryError as e:
-        st.error(f"Error: {str(e)}")
+        st.error(f"Memory Error: {str(e)}")
+    except TimeoutError as e:
+        st.error(f"Timeout Error: {str(e)}")
+    except Exception as e:
+        st.error(f"An unexpected error occurred: {str(e)}")
