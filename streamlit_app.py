@@ -317,17 +317,17 @@ if st.button("Run Analysis"):
         m.to_streamlit(height=600)
                 
         process_and_display(GES_diff)
+        export_and_download_all_images(
+            images_dict={
+                "GES_diff": GES_diff,
+                "GES_first": GES_first,
+                "GES_last": GES_last
+            },
+            region=my_region_geometry,
+            scale=1000
+        )
 
-        # Define your images and region here
-        images_dict = {
-            "GES_diff": GES_diff,
-            "GES_first": GES_first,
-            "GES_last": GES_last
-        }
-        
-        region = intersection
 
-        export_and_download_all_images(images_dict, region=intersection)
 
 
     except MemoryError as e:
