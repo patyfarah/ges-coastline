@@ -251,6 +251,11 @@ with st.sidebar:
 
 
 if st.button("Run Analysis"):
+    # Clear previous session state keys
+    keys_to_clear = ['intersection', 'region', 'filtered', 'GES_first', 'GES_last', 'GES_diff']
+    for key in keys_to_clear:
+        if key in st.session_state:
+            del st.session_state[key]
     try:
         st.info("Processing... Please wait a few moments.")
         intersection, region, filtered = cached_return_intersect(country, buffer_km)
