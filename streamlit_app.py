@@ -6,6 +6,7 @@ import geopandas as gpd
 import ee
 import geemap.foliumap as geemap
 import folium
+from streamlit_folium import folium_static
 from google.oauth2 import service_account
 import gc
 import matplotlib.pyplot as plt
@@ -222,7 +223,8 @@ if st.button("Run Analysis"):
         
         m.add_legend(title="GES Classification", legend_dict=dict(zip(ges_params1['labels'], ges_params1['palette'])))
 
-        m.to_streamlit(height=600)
+        #m.to_streamlit(height=600)
+        folium_static(m, height=600)
         
         process_and_display(GES_diff)
 
