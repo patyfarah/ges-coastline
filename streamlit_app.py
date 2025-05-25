@@ -298,23 +298,22 @@ if st.button("Run Analysis"):
         zip_filename = "GES_images.zip"
 
         if st.button("Export and Download All Images as ZIP"):
-            exported_files, errors = export_images_to_tiffs(images_dict, region, scale)
-        
-            if errors:
-                for error in errors:
-                    st.error(f"Export failed: {error}")
+            exported_files = export_images_to_tiffs(images_dict, region, scale)
         
             if exported_files:
-                zip_filename = "GES_images.zip"
                 create_zip(zip_filename, exported_files)
         
-                with open(zip_filename, "rb") as f:
-                    st.download_button(
-                        label="Download All Images (ZIP)",
-                        data=f,
-                        file_name=zip_filename,
-                        mime="application/zip"
-                    )
+                if os.path.exists(zip_filename):
+                    with open(zip_filename, "rb") as f:
+                        st.download_button(
+                            label="Download All Images (ZIP)",
+                            data=f,
+                            file_name=zip_filename,
+                            mime="application/zip"
+                        )
+                else:
+                    st.error("ZIP file was not created.")
+
 
 
 
