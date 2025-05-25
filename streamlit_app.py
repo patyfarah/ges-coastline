@@ -187,6 +187,40 @@ def process_and_display(image):
     except Exception as e:
         st.error(f"An unexpected error occurred: {str(e)}")
 
+
+def download_gee_images(images: dict, region: ee.Geometry, scale: int = 1000):
+    """
+    Exports multiple Earth Engine images to GeoTIFFs and provides Streamlit download buttons.
+
+    Parameters:
+    - images: Dictionary with keys as labels (e.g. 'GES_diff') and values as ee.Image objects.
+    - region: ee.Geometry defining the export region.
+    - scale: Resolution in meters per pixel.
+    """
+    for label, image in images.items():
+        filename = f"{label}.tif"
+        try:
+            # Export the image to local GeoTIFF file
+            geemap.ee_export_image(
+                image,
+                filename=filename,
+                scale=scale,
+                region=region,
+            )
+            st.success(f"{label} exported successfully!")
+
+            # Offer the file for download
+            with open(filename, "rb") as f:
+                st.download_button(
+                    label=f"Download {label}",
+                    data=f,
+                    file_name=filename,
+                    mime="image/tiff"
+                )
+        except Exception as e:
+            st.error(f"Export failed for {label}: {e}")
+
+
 # --- Streamlit UI --- #
 st.title("🌍 Good Environmental Status (GES) Mapping Tool")
 
@@ -224,9 +258,19 @@ if st.button("Run Analysis"):
         m.add_legend(title="GES Classification", legend_dict=dict(zip(ges_params1['labels'], ges_params1['palette'])))
 
         m.to_streamlit(height=600)
-        
-        
+                
         process_and_display(GES_diff)
+
+        download_gee_images(
+            images={
+                "GES_diff": GES_diff,
+                "GES_first": GES_first,
+                "GES_last": GES_last
+            },
+            region=my_region_geometry,
+            scale=1000
+)
+
 
     except MemoryError as e:
         st.error(f"Memory Error: {str(e)}")
