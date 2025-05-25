@@ -201,7 +201,7 @@ def download_gee_image(image: ee.Image, region: ee.Geometry, filename: str = 'ge
     try:
         # Export the image to local GeoTIFF file
         geemap.ee_export_image(
-            image=image,
+            image,
             filename=filename,
             scale=scale,
             region=region,
