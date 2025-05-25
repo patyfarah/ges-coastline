@@ -187,27 +187,33 @@ def process_and_display(image):
     except Exception as e:
         st.error(f"An unexpected error occurred: {str(e)}")
 
+
 def download_gee_image(image: ee.Image, region: ee.Geometry, filename: str = 'gee_image.tif', scale: int = 1000):
     """
-    Exports an Earth Engine image to a GeoTIFF and provides a Streamlit download button.
-
-    Parameters:
-    - image: ee.Image object to export.
-    - region: ee.Geometry defining the export region.
-    - filename: Name of the output file (TIF format).
-    - scale: Resolution in meters per pixel.
+    Exports an Earth Engine image to a GeoTIFF and provides a Streamlit download button,
+    using session state to prevent repeated export on every rerun.
     """
-    try:
-        # Export the image to local GeoTIFF file
-        geemap.ee_export_image(
-            image,
-            filename=filename,
-            scale=scale,
-            region=region,
-        )
-        st.success("Image exported successfully!")
+    # Initialize state
+    if 'export_done' not in st.session_state:
+        st.session_state.export_done = False
 
-        # Offer the file for download
+    # Export once
+    if not st.session_state.export_done:
+        try:
+            geemap.ee_export_image(
+                image,
+                filename=filename,
+                scale=scale,
+                region=region,
+            )
+            st.session_state.export_done = True
+            st.success("Image exported successfully!")
+        except Exception as e:
+            st.error(f"Image export failed: {e}")
+            return
+
+    # Display download button
+    if st.session_state.export_done:
         with open(filename, "rb") as f:
             st.download_button(
                 label="Download GeoTIFF",
@@ -215,9 +221,6 @@ def download_gee_image(image: ee.Image, region: ee.Geometry, filename: str = 'ge
                 file_name=filename,
                 mime="image/tiff"
             )
-    except Exception as e:
-        st.error(f"Image export failed: {e}")
-
 
 
         
