@@ -189,11 +189,6 @@ def process_and_display(image):
     except Exception as e:
         st.error(f"An unexpected error occurred: {str(e)}")
 
-import streamlit as st
-import geemap
-import ee
-import zipfile
-import os
 
 def export_images_to_tiffs(images: dict, region: ee.Geometry, scale: int = 1000):
     exported_files = []
@@ -305,7 +300,7 @@ if st.button("Run Analysis"):
                 "GES_first": GES_first,
                 "GES_last": GES_last
             },
-            region=my_region_geometry,
+            region=intersection,
             scale=1000
         )
 
