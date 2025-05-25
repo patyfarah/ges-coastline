@@ -189,18 +189,40 @@ def process_and_display(image):
         st.error(f"An unexpected error occurred: {str(e)}")
 
 def download_ee_image(image,intersection, description='image', scale=30, crs='EPSG:3857'):
+    def download_ee_image(image, intersection, description='image', scale=30, crs='EPSG:4326'):
     try:
+        # Check for valid data in the region
+        stats = image.reduceRegion(
+            reducer=ee.Reducer.count(),
+            geometry=intersection,
+            scale=scale,
+            maxPixels=1e13
+        ).getInfo()
+
+        if not any(stats.values()):
+            st.warning("The image has no data in the selected region.")
+            return
+
+        # Download the image
         url = image.getDownloadURL({
             'scale': scale,
             'crs': crs,
             'fileFormat': 'GeoTIFF',
             'region': intersection
         })
+
         st.info("Downloading image...")
         response = requests.get(url)
         response.raise_for_status()
 
-        st.success("Download ready")
+        # File size check (bytes)
+        file_size = len(response.content)
+        if file_size < 10_000:  # ~10 KB (tweak threshold if needed)
+            st.error(f"The downloaded file seems too small ({file_size} bytes). It may be corrupted or empty.")
+            return
+
+        # If all good, present the download
+        st.success(f"Download ready ({file_size / 1024:.2f} KB)")
         st.download_button(
             label="Download GeoTIFF",
             data=response.content,
