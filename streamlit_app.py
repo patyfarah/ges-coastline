@@ -188,12 +188,6 @@ def process_and_display(image):
     except Exception as e:
         st.error(f"An unexpected error occurred: {str(e)}")
 
-import streamlit as st
-import ee
-import requests
-
-ee.Initialize()
-
 def download_ee_image(image, description='image', scale=1000, crs='EPSG:3857'):
     try:
         url = image.getDownloadURL({
