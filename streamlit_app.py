@@ -295,6 +295,7 @@ if st.button("Run Analysis"):
         
         region = intersection
         scale = 1000
+        zip_filename = "GES_images.zip"
 
         if st.button("Export and Download All Images as ZIP"):
             exported_files, errors = export_images_to_tiffs(images_dict, region, scale)
