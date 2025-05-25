@@ -189,43 +189,34 @@ def process_and_display(image):
 
 def download_gee_image(image: ee.Image, region: ee.Geometry, filename: str = 'gee_image.tif', scale: int = 1000):
     """
-    Exports an Earth Engine image to a GeoTIFF and provides a Streamlit download button,
-    using session state and unique keys to avoid session resets and duplicate ID errors.
+    Exports an Earth Engine image to a GeoTIFF and provides a Streamlit download button.
+
+    Parameters:
+    - image: ee.Image object to export.
+    - region: ee.Geometry defining the export region.
+    - filename: Name of the output file (TIF format).
+    - scale: Resolution in meters per pixel.
     """
+    try:
+        # Export the image to local GeoTIFF file
+        geemap.ee_export_image(
+            image,
+            filename=filename,
+            scale=scale,
+            region=region,
+        )
+        st.success("Image exported successfully!")
 
-    export_key = f"export_button_{filename}"
-    download_key = f"download_button_{filename}"
-    export_flag_key = f"image_exported_{filename}"
-
-    if export_flag_key not in st.session_state:
-        st.session_state[export_flag_key] = False
-
-    if st.button("Export Image", key=export_key):
-        try:
-            geemap.ee_export_image(
-                image,
-                filename=filename,
-                scale=scale,
-                region=region,
+        # Offer the file for download
+        with open(filename, "rb") as f:
+            st.download_button(
+                label="Download GeoTIFF",
+                data=f,
+                file_name=filename,
+                mime="image/tiff"
             )
-            st.session_state[export_flag_key] = True
-            st.success("Image exported successfully!")
-        except Exception as e:
-            st.error(f"Image export failed: {e}")
-            st.session_state[export_flag_key] = False
-
-    if st.session_state[export_flag_key]:
-        try:
-            with open(filename, "rb") as f:
-                st.download_button(
-                    label="Download GeoTIFF",
-                    data=f,
-                    file_name=filename,
-                    mime="image/tiff",
-                    key=download_key
-                )
-        except Exception as e:
-            st.error(f"Download failed: {e}")
+    except Exception as e:
+        st.error(f"Image export failed: {e}")
 
 
 
