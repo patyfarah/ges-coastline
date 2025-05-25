@@ -142,7 +142,7 @@ def cached_return_intersect(country, buffer_dist_km):
     return return_intersect(country, buffer_dist_km)
 
 @st.cache_data(show_spinner=False, persist=True)
-def cached_get_ges(intersection, year):
+def cached_get_ges(_intersection, year):
     return get_ges(intersection, year)
 
 
