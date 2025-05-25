@@ -255,18 +255,7 @@ if st.button("Run Analysis"):
         st.session_state["region"] = region
         st.session_state["intersection"] = intersection
         st.session_state["filtered"] = filtered
-
-        # Display map and chart
-        m = geemap.Map()
-        m.centerObject(region, 6)
-        m.addLayer(GES_first, ges_params1, "GES Start Year", shown=False)
-        m.addLayer(GES_last, ges_params1, "GES End Year", shown=False)
-        m.addLayer(GES_diff, ges_params1, "GES Change")
-        m.addLayer(filtered.style(**{"color": "black", "fillColor": "#00000000", "width": 2}), {}, "Border")
-        m.add_legend(title="GES Classification", legend_dict=dict(zip(ges_params1['labels'], ges_params1['palette'])))
-        m.to_streamlit(height=600)
-
-        process_and_display(GES_diff)
+        st.session_state["analysis_done"] = True  # marker to display map/chart later
 
     except MemoryError as e:
         st.error(f"Memory Error: {str(e)}")
@@ -274,9 +263,25 @@ if st.button("Run Analysis"):
         st.error(f"Timeout Error: {str(e)}")
     except Exception as e:
         st.error(f"An unexpected error occurred: {str(e)}")
+        
+if st.session_state.get("analysis_done"):
+    st.subheader("GES Map Viewer")
 
-if "GES_diff" in st.session_state:
-    st.subheader("Download Results")
+    # Display Map
+    m = geemap.Map()
+    m.centerObject(st.session_state["region"], 6)
+    m.addLayer(st.session_state["GES_first"], ges_params1, "GES Start Year", shown=False)
+    m.addLayer(st.session_state["GES_last"], ges_params1, "GES End Year", shown=False)
+    m.addLayer(st.session_state["GES_diff"], ges_params1, "GES Change")
+    m.addLayer(st.session_state["filtered"].style(**{"color": "black", "fillColor": "#00000000", "width": 2}), {}, "Border")
+    m.add_legend(title="GES Classification", legend_dict=dict(zip(ges_params1['labels'], ges_params1['palette'])))
+    m.to_streamlit(height=600)
+
+    # Show the bar chart
+    process_and_display(st.session_state["GES_diff"])
+
+if st.session_state.get("analysis_done"):
+    st.subheader("📥 Download GES Results")
 
     for img_key, label, fname in zip(
         ["GES_diff", "GES_first", "GES_last"],
@@ -296,7 +301,8 @@ if "GES_diff" in st.session_state:
                     data=f,
                     file_name=fname,
                     mime="image/tiff",
-                    key=fname  # unique key per button
+                    key=fname
                 )
         except Exception as e:
             st.error(f"Failed to export {label}: {e}")
+
