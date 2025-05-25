@@ -189,67 +189,36 @@ def process_and_display(image):
     except Exception as e:
         st.error(f"An unexpected error occurred: {str(e)}")
 
+def download_gee_image(image: ee.Image, region: ee.Geometry, filename: str = 'gee_image.tif', scale: int = 1000):
+    """
+    Exports an Earth Engine image to a GeoTIFF and provides a Streamlit download button.
 
-def export_images_to_tiffs(images: dict, region: ee.Geometry, scale: int = 1000):
-    exported_files = []
-    for label, image in images.items():
-        filename = f"{label}.tif"
-        try:
-            geemap.ee_export_image(
-                image=image,
-                filename=filename,
-                scale=scale,
-                region=region
-            )
-            st.success(f"{label} exported.")
-            exported_files.append(filename)
-        except Exception as e:
-            st.error(f"{label} failed to export: {e}")
-    return exported_files
-
-def create_zip(zip_filename: str, files: list):
+    Parameters:
+    - image: ee.Image object to export.
+    - region: ee.Geometry defining the export region.
+    - filename: Name of the output file (TIF format).
+    - scale: Resolution in meters per pixel.
+    """
     try:
-        with zipfile.ZipFile(zip_filename, 'w') as zipf:
-            for file in files:
-                if os.path.exists(file):
-                    zipf.write(file)
-        return os.path.exists(zip_filename)
+        # Export the image to local GeoTIFF file
+        geemap.ee_export_image(
+            image,
+            filename=filename,
+            scale=scale,
+            region=region,
+        )
+        st.success("Image exported successfully!")
+
+        # Offer the file for download
+        with open(filename, "rb") as f:
+            st.download_button(
+                label="Download GeoTIFF",
+                data=f,
+                file_name=filename,
+                mime="image/tiff"
+            )
     except Exception as e:
-        st.error(f"ZIP creation failed: {e}")
-        return False
-
-def export_and_download_all_images(images_dict, region, scale=1000, zip_filename="GES_images.zip"):
-    """
-    Streamlit function to export multiple GEE images, zip them, and provide one download button.
-    """
-    # Put the Streamlit button **inside** this function
-    if st.button("Export and Download All Images as ZIP"):
-        st.info("Starting export...")
-        exported_files = export_images_to_tiffs(images_dict, region, scale)
-
-        if not exported_files:
-            st.error("No files were exported.")
-            return
-
-        st.info("Creating ZIP archive...")
-        zip_created = create_zip(zip_filename, exported_files)
-
-        if zip_created:
-            st.success("ZIP file ready!")
-            with open(zip_filename, "rb") as f:
-                st.download_button(
-                    label="Download All Images (ZIP)",
-                    data=f,
-                    file_name=zip_filename,
-                    mime="application/zip"
-                )
-        else:
-            st.error("ZIP file was not created.")
-
-        # Optional: clean up individual TIFFs
-        for file in exported_files:
-            if os.path.exists(file):
-                os.remove(file)
+        st.error(f"Image export failed: {e}")
 
 
 
@@ -294,15 +263,32 @@ if st.button("Run Analysis"):
         m.to_streamlit(height=600)
                 
         process_and_display(GES_diff)
-        export_and_download_all_images(
-            images_dict={
-                "GES_diff": GES_diff,
-                "GES_first": GES_first,
-                "GES_last": GES_last
-            },
-            region=intersection,
-            scale=1000
-        )
+
+    
+        # Export and provide download buttons for all three images
+        for img, label, fname in zip(
+            [GES_diff, GES_first, GES_last],
+            ["Download GES Change", "Download GES Start Year", "Download GES End Year"],
+            ["ges-change.tif", "ges-first.tif", "ges-last.tif"]
+        ):
+            try:
+                geemap.ee_export_image(
+                    img,
+                    filename=fname,
+                    scale=1000,
+                    region=intersection,
+                )
+                with open(fname, "rb") as f:
+                    st.download_button(
+                        label=label,
+                        data=f,
+                        file_name=fname,
+                        mime="image/tiff",
+                        key=fname  # unique key for each button
+                    )
+            except Exception as e:
+                st.error(f"Failed to export {label}: {e}")
+
 
 
     except MemoryError as e:
