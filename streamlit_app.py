@@ -244,12 +244,20 @@ with st.sidebar:
 if st.button("Run Analysis"):
     try:
         st.info("Processing... Please wait a few moments.")
-        intersection, region, filtered = return_intersect(country, buffer_km)
-        GES_first = get_ges(intersection, start_year)
-        GES_last = get_ges(intersection, end_year)
+        intersection, region, filtered = cached_return_intersect(country, buffer_km)
+        GES_first = cached_get_ges(intersection, start_year)
+        GES_last = cached_get_ges(intersection, end_year)
         GES_diff = GES_last.subtract(GES_first)
-        
-        # Display the map
+
+        # Save results in session state
+        st.session_state['intersection'] = intersection
+        st.session_state['region'] = region
+        st.session_state['filtered'] = filtered
+        st.session_state['GES_first'] = GES_first
+        st.session_state['GES_last'] = GES_last
+        st.session_state['GES_diff'] = GES_diff
+
+        # Display map and chart (same as before)
         m = geemap.Map()
         m.centerObject(region, 6)
         m.addLayer(GES_first, ges_params1, "GES Start Year", shown=False)
@@ -258,34 +266,10 @@ if st.button("Run Analysis"):
         m.addLayer(filtered.style(**{"color": "black", "fillColor": "#00000000", "width": 2}), {}, "Border")
         m.add_legend(title="GES Classification", legend_dict=dict(zip(ges_params1['labels'], ges_params1['palette'])))
         m.to_streamlit(height=600)
-                    
+
         process_and_display(GES_diff)
 
-        # Export and provide download buttons for all three images
-        for img, label, fname in zip(
-            [GES_diff, GES_first, GES_last],
-            ["Download GES Change", "Download GES Start Year", "Download GES End Year"],
-            ["ges-change.tif", "ges-first.tif", "ges-last.tif"]
-        ):
-            try:
-                geemap.ee_export_image(
-                    img,
-                    filename=fname,
-                    scale=1000,
-                    region=intersection,
-                )
-                with open(fname, "rb") as f:
-                    st.download_button(
-                        label=label,
-                        data=f,
-                        file_name=fname,
-                        mime="image/tiff",
-                        key=fname  # unique key for each button
-                    )
-            except Exception as e:
-                st.error(f"Failed to export {label}: {e}")
-
-
+        st.success("Analysis complete! You can now download the results below.")
 
     except MemoryError as e:
         st.error(f"Memory Error: {str(e)}")
@@ -293,3 +277,33 @@ if st.button("Run Analysis"):
         st.error(f"Timeout Error: {str(e)}")
     except Exception as e:
         st.error(f"An unexpected error occurred: {str(e)}")
+
+if 'GES_diff' in st.session_state:
+    st.markdown("---")
+    st.header("Download Results")
+
+    for img, label, fname in zip(
+        [st.session_state['GES_diff'], st.session_state['GES_first'], st.session_state['GES_last']],
+        ["Download GES Change", "Download GES Start Year", "Download GES End Year"],
+        ["ges-change.tif", "ges-first.tif", "ges-last.tif"]
+    ):
+        try:
+            geemap.ee_export_image(
+                img,
+                filename=fname,
+                scale=1000,
+                region=st.session_state['intersection'],
+            )
+            with open(fname, "rb") as f:
+                st.download_button(
+                    label=label,
+                    data=f,
+                    file_name=fname,
+                    mime="image/tiff",
+                    key=fname  # unique key for each button
+                )
+        except Exception as e:
+            st.error(f"Failed to export {label}: {e}")
+else:
+    st.info("Run the analysis to enable downloads.")
+
