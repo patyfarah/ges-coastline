@@ -82,6 +82,7 @@ def return_intersect(country, buffer_dist_km):
     coastline_buffer = coastline.buffer(buffer_dist_km * 1000)
     intersection = outer_band.intersection(coastline_buffer)
     del countries, buffered, outer_band, asset_id,ee_fc,coastline, coastline_buffer
+    gc.collect()
     return intersection, region, filtered
 
 def get_ges(intersection, year):
