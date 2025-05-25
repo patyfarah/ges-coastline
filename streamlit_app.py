@@ -244,7 +244,7 @@ def create_zip(zip_filename: str, files: list):
             zipf.write(file)
     return zip_filename
 
-def export_and_download_all_images(images_dict, region, scale=1000, zip_filename="GES_images.zip"):
+def export_and_download_all_images(images_dict, region, scale=1000, zip_filename="C:\GES_images.zip"):
     """
     Exports multiple Earth Engine images, zips them, and provides a Streamlit download button.
 
